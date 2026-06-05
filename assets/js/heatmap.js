@@ -29,6 +29,25 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', paint);
+  function wireHover() {
+    var preview = document.getElementById('qt-hm-preview');
+    if (!preview) return;
+    var defaultText = preview.innerHTML;
+    document.querySelectorAll('.qt-hm-cell[data-date]').forEach(function (el) {
+      el.addEventListener('mouseenter', function () {
+        var date = el.getAttribute('data-date') || '';
+        var pnl  = parseFloat(el.getAttribute('data-pnl'));
+        var sign = isNaN(pnl) ? '' : (pnl > 0 ? '+' : '');
+        var klass = isNaN(pnl) || pnl === 0 ? 'text-ink-mute dark:text-night-mute'
+                  : pnl > 0 ? 'text-up' : 'text-down';
+        preview.innerHTML =
+          '<span class="text-ink dark:text-night-ink-hi">' + date + '</span>' +
+          ' · <span class="' + klass + ' font-semibold">' + sign + (isNaN(pnl) ? '—' : pnl) + ' USD</span>';
+      });
+      el.addEventListener('mouseleave', function () { preview.innerHTML = defaultText; });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { paint(); wireHover(); });
   window.addEventListener('qt-theme-change', paint);
 })();
