@@ -1,17 +1,16 @@
 title: Personal Time-series Notes
 description: Daily data observations and visualizations.
 baseurl: "/qtrade-reports"
+url: "https://momo733.github.io"
 
-remote_theme: just-the-docs/just-the-docs
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
 
-# just-the-docs settings
-search_enabled: true
-heading_anchors: true
-color_scheme: light
-
-# Plugins required by GitHub Pages
+# GitHub-Pages safe plugins
 plugins:
-  - jekyll-remote-theme
   - jekyll-seo-tag
   - jekyll-sitemap
 
@@ -23,17 +22,8 @@ exclude:
   - Gemfile
   - Gemfile.lock
 
-# Render .html files (charts) as-is, not through Jekyll
+# Render generated chart HTMLs as-is (not via Liquid).
 include:
   - "daily-trades/*.html"
 keep_files:
   - "assets"
-
-# Default front matter so we don't have to add it to every markdown
-defaults:
-  - scope:
-      path: "daily-trades"
-      type: pages
-    values:
-      layout: default
-      parent: Daily Trades

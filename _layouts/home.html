@@ -1,0 +1,122 @@
+---
+layout: default
+---
+{%- assign days = site.data.days | sort: 'date' | reverse -%}
+{%- assign total_pnl = 0 -%}
+{%- assign total_trades = 0 -%}
+{%- assign win_days = 0 -%}
+{%- assign loss_days = 0 -%}
+{%- assign flat_days = 0 -%}
+{%- assign best_day = days | first -%}
+{%- assign worst_day = days | first -%}
+{%- for d in days -%}
+  {%- assign total_pnl = total_pnl | plus: d.pnl -%}
+  {%- assign total_trades = total_trades | plus: d.trades -%}
+  {%- if d.pnl > 0 -%}{% assign win_days = win_days | plus: 1 %}{% endif -%}
+  {%- if d.pnl < 0 -%}{% assign loss_days = loss_days | plus: 1 %}{% endif -%}
+  {%- if d.pnl == 0 -%}{% assign flat_days = flat_days | plus: 1 %}{% endif -%}
+  {%- if d.pnl > best_day.pnl -%}{% assign best_day = d %}{% endif -%}
+  {%- if d.pnl < worst_day.pnl -%}{% assign worst_day = d %}{% endif -%}
+{%- endfor -%}
+
+<!-- Hero: all-time stats -->
+<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-6 sm:p-8 mb-6">
+  <div class="flex flex-wrap items-baseline gap-x-4 gap-y-2 mb-4">
+    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">{{ site.title }}</h1>
+    <span class="text-xs uppercase tracking-wider text-ink-muted dark:text-night-muted">Personal review · {{ days | size }} 天</span>
+  </div>
+  <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-4">
+    <div>
+      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Total PnL</dt>
+      <dd class="font-mono text-3xl sm:text-4xl font-bold leading-none mt-1
+                 {% if total_pnl > 0 %}text-win{% elsif total_pnl < 0 %}text-loss{% else %}text-ink-soft{% endif %}">
+        {% if total_pnl > 0 %}+{% endif %}{{ total_pnl | round: 2 }}
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Win-day rate</dt>
+      <dd class="font-mono text-3xl sm:text-4xl font-bold leading-none mt-1">
+        {% if days.size > 0 %}{{ win_days | times: 100 | divided_by: days.size }}%{% else %}—{% endif %}
+        <span class="text-sm font-normal text-ink-muted dark:text-night-muted ml-2">
+          {{ win_days }}W / {{ loss_days }}L{% if flat_days > 0 %} / {{ flat_days }}—{% endif %}
+        </span>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Best day</dt>
+      <dd class="font-mono text-base mt-1">
+        {% if best_day.pnl > 0 %}<span class="text-win font-bold">+{{ best_day.pnl }}</span>
+        {% else %}—{% endif %}
+        {% if best_day %}<a href="daily-trades/{{ best_day.date }}.html" class="ml-2 text-ink-muted hover:text-ink dark:hover:text-night-ink underline-offset-2 hover:underline">{{ best_day.date }}</a>{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Worst day</dt>
+      <dd class="font-mono text-base mt-1">
+        {% if worst_day.pnl < 0 %}<span class="text-loss font-bold">{{ worst_day.pnl }}</span>
+        {% else %}—{% endif %}
+        {% if worst_day %}<a href="daily-trades/{{ worst_day.date }}.html" class="ml-2 text-ink-muted hover:text-ink dark:hover:text-night-ink underline-offset-2 hover:underline">{{ worst_day.date }}</a>{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Total trades</dt>
+      <dd class="font-mono text-base mt-1">{{ total_trades }}</dd>
+    </div>
+    <div>
+      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Days tracked</dt>
+      <dd class="font-mono text-base mt-1">{{ days | size }}</dd>
+    </div>
+  </dl>
+</section>
+
+<!-- Calendar heatmap -->
+{% include calendar_heatmap.html %}
+
+<!-- Recent days list -->
+<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-4 sm:p-6 mb-6">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-lg font-semibold">All days</h2>
+    <span class="text-xs text-ink-muted dark:text-night-muted">click a column header to sort</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="qt-table qt-trade-table w-full text-sm font-mono">
+      <thead>
+        <tr class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted text-left">
+          <th class="px-3 py-2" data-sortable="1">Date</th>
+          <th class="px-3 py-2 text-right" data-sortable="1">PnL</th>
+          <th class="px-3 py-2 text-right" data-sortable="1">Trades</th>
+          <th class="px-3 py-2 text-right" data-sortable="1">W / L / BE</th>
+          <th class="px-3 py-2 text-right" data-sortable="1">Win%</th>
+          <th class="px-3 py-2 text-right" data-sortable="1">Best</th>
+          <th class="px-3 py-2 text-right" data-sortable="1">Worst</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in days %}
+        <tr class="border-t border-ink-line dark:border-night-line hover:bg-ink-line/30 dark:hover:bg-night-line/40">
+          <td class="px-3 py-2"><a class="hover:underline" href="daily-trades/{{ d.date }}.html">{{ d.date }}</a></td>
+          <td class="px-3 py-2 text-right
+                 {% if d.pnl > 0 %}text-win font-semibold{% elsif d.pnl < 0 %}text-loss font-semibold{% else %}text-ink-muted{% endif %}">
+            {% if d.pnl > 0 %}+{% endif %}{{ d.pnl }}
+          </td>
+          <td class="px-3 py-2 text-right">{{ d.trades }}</td>
+          <td class="px-3 py-2 text-right">
+            <span class="text-win">{{ d.wins | default: 0 }}</span>
+            <span class="text-ink-muted">/</span>
+            <span class="text-loss">{{ d.losses | default: 0 }}</span>
+            <span class="text-ink-muted">/</span>
+            {{ d.breakeven | default: 0 }}
+          </td>
+          <td class="px-3 py-2 text-right">{% if d.trades and d.trades > 0 %}{{ d.win_rate | times: 100 | round: 0 }}%{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-right">{% if d.biggest_win %}<span class="text-win">+{{ d.biggest_win }}</span>{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-right">{% if d.biggest_loss %}<span class="text-loss">{{ d.biggest_loss }}</span>{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="prose prose-sm sm:prose dark:prose-invert max-w-none qt-md">
+  {{ content }}
+</section>

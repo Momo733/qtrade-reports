@@ -1,0 +1,200 @@
+---
+layout: default
+---
+{%- assign d = page.date -%}
+{%- assign all_days = site.data.days | sort: 'date' -%}
+{%- assign prev_day = nil -%}
+{%- assign next_day = nil -%}
+{%- for entry in all_days -%}
+  {%- if entry.date == d -%}
+    {%- assign idx = forloop.index0 -%}
+    {%- if forloop.index0 > 0 -%}
+      {%- assign prev_idx = forloop.index0 | minus: 1 -%}
+      {%- assign prev_day = all_days[prev_idx] -%}
+    {%- endif -%}
+    {%- if forloop.last == false -%}
+      {%- assign next_idx = forloop.index0 | plus: 1 -%}
+      {%- assign next_day = all_days[next_idx] -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- assign pnl = page.pnl | default: 0 -%}
+{%- if pnl > 0 -%}{% assign pnl_klass = 'text-win' %}{% assign pnl_sign = '+' %}
+{%- elsif pnl < 0 -%}{% assign pnl_klass = 'text-loss' %}{% assign pnl_sign = '' %}
+{%- else -%}{% assign pnl_klass = 'text-ink-soft dark:text-night-soft' %}{% assign pnl_sign = '' %}{% endif -%}
+
+<!-- Sticky day navigation -->
+<nav class="flex items-center justify-between gap-3 mb-6 text-sm sticky top-[58px] z-10 backdrop-blur bg-canvas/85 dark:bg-night-bg/85 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-2 border-b border-ink-line dark:border-night-line">
+  <div class="flex-1 min-w-0">
+    {% if prev_day %}
+      <a href="{{ prev_day.date }}.html"
+         class="inline-flex items-center gap-1.5 px-2 py-1 -ml-2 rounded hover:bg-ink-line/40 dark:hover:bg-night-line/60 text-ink-soft dark:text-night-soft">
+        <span aria-hidden="true">←</span>
+        <span class="font-mono">{{ prev_day.date }}</span>
+        <span class="hidden sm:inline-block text-ink-muted">
+          {% if prev_day.pnl > 0 %}<span class="text-win">+{{ prev_day.pnl }}</span>
+          {% elsif prev_day.pnl < 0 %}<span class="text-loss">{{ prev_day.pnl }}</span>
+          {% else %}0{% endif %}
+        </span>
+      </a>
+    {% endif %}
+  </div>
+  <a href="{{ '/' | relative_url }}" class="text-ink-muted dark:text-night-muted hover:text-ink dark:hover:text-night-ink">Home</a>
+  <div class="flex-1 min-w-0 text-right">
+    {% if next_day %}
+      <a href="{{ next_day.date }}.html"
+         class="inline-flex items-center gap-1.5 px-2 py-1 -mr-2 rounded hover:bg-ink-line/40 dark:hover:bg-night-line/60 text-ink-soft dark:text-night-soft">
+        <span class="hidden sm:inline-block text-ink-muted">
+          {% if next_day.pnl > 0 %}<span class="text-win">+{{ next_day.pnl }}</span>
+          {% elsif next_day.pnl < 0 %}<span class="text-loss">{{ next_day.pnl }}</span>
+          {% else %}0{% endif %}
+        </span>
+        <span class="font-mono">{{ next_day.date }}</span>
+        <span aria-hidden="true">→</span>
+      </a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-6 sm:p-8 mb-6">
+  <div class="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+    <h1 class="text-2xl sm:text-3xl font-semibold font-mono tracking-tight">{{ d }}</h1>
+    <span class="text-xs uppercase tracking-wider text-ink-muted dark:text-night-muted">QQQ · 1-min</span>
+  </div>
+  <div class="mt-4 flex flex-wrap items-end gap-x-8 gap-y-3">
+    <div>
+      <div class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted mb-1">Daily PnL (USD)</div>
+      <div class="font-mono text-4xl sm:text-5xl font-bold {{ pnl_klass }} leading-none">
+        {{ pnl_sign }}{{ pnl }}
+      </div>
+    </div>
+    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3 text-sm">
+      <div>
+        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Trades</dt>
+        <dd class="font-mono text-xl">{{ page.trades | default: 0 }}</dd>
+      </div>
+      <div>
+        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">W / L / BE</dt>
+        <dd class="font-mono text-xl">
+          <span class="text-win">{{ page.wins | default: 0 }}</span>
+          <span class="text-ink-muted">/</span>
+          <span class="text-loss">{{ page.losses | default: 0 }}</span>
+          <span class="text-ink-muted">/</span>
+          <span>{{ page.breakeven | default: 0 }}</span>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Win rate</dt>
+        <dd class="font-mono text-xl">{% if page.trades and page.trades > 0 %}{{ page.win_rate | times: 100 | round: 0 }}%{% else %}—{% endif %}</dd>
+      </div>
+      <div>
+        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Best / Worst</dt>
+        <dd class="font-mono text-sm">
+          {% if page.biggest_win %}<span class="text-win">+{{ page.biggest_win }}</span>{% else %}—{% endif %}
+          <span class="text-ink-muted mx-1">·</span>
+          {% if page.biggest_loss %}<span class="text-loss">{{ page.biggest_loss }}</span>{% else %}—{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<!-- Chart embed (full-width inside the page container) -->
+{% if page.has_chart %}
+<section class="mb-6">
+  <iframe id="daily-chart"
+          src="{{ page.chart }}"
+          class="block w-full rounded-2xl border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk bg-surface dark:bg-night-surface
+                 h-[70vh] min-h-[460px] sm:h-[82vh] sm:min-h-[640px]"
+          loading="lazy"
+          title="{{ d }} interactive chart"></iframe>
+  <div class="mt-2 text-xs text-ink-muted dark:text-night-muted flex flex-wrap items-center gap-x-4">
+    <a href="{{ page.chart }}" class="text-ink-soft hover:text-ink dark:text-night-soft dark:hover:text-night-ink underline-offset-2 hover:underline">
+      全屏打开交互图 →
+    </a>
+    <span class="opacity-60">Tip: hover a marker on the chart for trade details · click + drag to pan · scroll to zoom</span>
+  </div>
+</section>
+
+<script>
+  // Forward dark/light theme to the chart iframe so it can recolor.
+  (function(){
+    var ifr = document.getElementById('daily-chart');
+    if (!ifr) return;
+    function send(){
+      try { ifr.contentWindow && ifr.contentWindow.postMessage({type:'qt-theme', theme: window.qtCurrentTheme()}, '*'); } catch(e){}
+    }
+    ifr.addEventListener('load', send);
+    window.addEventListener('qt-theme-change', send);
+  })();
+</script>
+{% endif %}
+
+<!-- Source markdown (trade tables, K-line, runtime config, shadow obs). -->
+<section class="prose prose-sm sm:prose dark:prose-invert max-w-none qt-md">
+  {{ content }}
+</section>
+
+<!-- After Liquid renders the markdown, fold verbose H2 sections into <details>. -->
+<script>
+(function(){
+  var FOLD_TITLES = [
+    '当日 K 线', 'K 线', '运行配置',
+    'Regime 过滤', 'Shadow Regime 观察',
+    'Shadow 高潮止盈', 'Shadow 分档参数对比',
+    '信号品质过滤', '入场过滤'
+  ];
+  function shouldFold(text){
+    text = (text || '').trim();
+    for (var i=0;i<FOLD_TITLES.length;i++){ if (text.indexOf(FOLD_TITLES[i]) !== -1) return true; }
+    return false;
+  }
+  var root = document.querySelector('section.qt-md');
+  if (!root) return;
+  var headings = Array.prototype.slice.call(root.querySelectorAll('h2'));
+  headings.forEach(function(h2){
+    if (!shouldFold(h2.textContent)) return;
+    var details = document.createElement('details');
+    details.className = 'my-3 rounded-lg border border-ink-line dark:border-night-line bg-surface dark:bg-night-surface';
+    var summary = document.createElement('summary');
+    summary.className = 'px-4 py-2.5 cursor-pointer select-none text-sm font-semibold text-ink-soft dark:text-night-soft hover:bg-ink-line/30 dark:hover:bg-night-line/40 rounded-lg';
+    summary.textContent = h2.textContent.trim();
+    details.appendChild(summary);
+    var wrap = document.createElement('div');
+    wrap.className = 'px-4 pb-3 pt-1';
+    // Move siblings until next H2 or end into the details
+    var sib = h2.nextSibling;
+    while (sib && !(sib.nodeType === 1 && sib.tagName === 'H2')) {
+      var nxt = sib.nextSibling;
+      wrap.appendChild(sib);
+      sib = nxt;
+    }
+    details.appendChild(wrap);
+    h2.parentNode.replaceChild(details, h2);
+  });
+  // Tag trade-table heads with sortable attributes.
+  var tables = root.querySelectorAll('table');
+  tables.forEach(function(t){
+    t.classList.add('qt-table');
+    var firstHeader = t.querySelector('thead th, tr th');
+    if (firstHeader && /^#?$/.test(firstHeader.textContent.trim())) {
+      // Likely the trade table — make headers sortable.
+      t.classList.add('qt-trade-table');
+      Array.prototype.forEach.call(t.querySelectorAll('thead th'), function(th, i){
+        th.setAttribute('data-sortable','1');
+        th.classList.add('cursor-pointer','select-none','hover:bg-ink-line/40','dark:hover:bg-night-line/60');
+      });
+    }
+  });
+  // Color PnL cells (find any cell whose text looks like ±NNN.NN)
+  Array.prototype.forEach.call(root.querySelectorAll('td'), function(td){
+    var s = td.textContent.trim();
+    if (/^[+\-]\d/.test(s)) {
+      if (s.charAt(0) === '+') td.classList.add('text-win','font-semibold');
+      else if (s.charAt(0) === '-') td.classList.add('text-loss','font-semibold');
+    }
+  });
+})();
+</script>

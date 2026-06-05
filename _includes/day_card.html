@@ -1,0 +1,14 @@
+{%- assign d = include.day -%}
+<a href="daily-trades/{{ d.date }}.html"
+   class="block rounded-xl border border-ink-line dark:border-night-line bg-surface dark:bg-night-surface p-4 shadow-card dark:shadow-card-dk hover:border-ink-soft dark:hover:border-night-soft transition">
+  <div class="flex items-baseline justify-between gap-2">
+    <span class="font-mono text-sm text-ink-soft dark:text-night-soft">{{ d.date }}</span>
+    <span class="font-mono text-lg font-bold
+                 {% if d.pnl > 0 %}text-win{% elsif d.pnl < 0 %}text-loss{% else %}text-ink-muted{% endif %}">
+      {% if d.pnl > 0 %}+{% endif %}{{ d.pnl }}
+    </span>
+  </div>
+  <div class="mt-1 text-xs text-ink-muted dark:text-night-muted">
+    {{ d.trades }} trades · {{ d.wins | default: 0 }}W/{{ d.losses | default: 0 }}L
+  </div>
+</a>

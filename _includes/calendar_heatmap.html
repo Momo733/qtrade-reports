@@ -1,0 +1,63 @@
+{%- comment -%}
+  PnL calendar heatmap. Cells flow top-to-bottom Mon..Fri then to the next
+  column (= next ISO week). Color buckets assigned client-side by
+  assets/js/heatmap.js based on data-pnl.
+{%- endcomment -%}
+
+{%- assign days_asc = site.data.days | sort: 'date' -%}
+{%- if days_asc.size == 0 -%}{%- else -%}
+{%- assign first = days_asc | first -%}
+{%- assign last  = days_asc | last  -%}
+{%- assign first_ts = first.date | append: 'T00:00:00Z' | date: '%s' | plus: 0 -%}
+{%- assign last_ts  = last.date  | append: 'T00:00:00Z' | date: '%s' | plus: 0 -%}
+
+{%- comment -%} Anchor to the Monday on/before `first` so weeks line up. {%- endcomment -%}
+{%- assign first_wd = first.date | append: 'T00:00:00Z' | date: '%u' | plus: 0 -%}
+{%- assign back_secs = first_wd | minus: 1 | times: 86400 -%}
+{%- assign anchor_ts = first_ts | minus: back_secs -%}
+
+{%- assign span_days = last_ts | minus: anchor_ts | divided_by: 86400 | plus: 1 -%}
+
+<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-4 sm:p-6 mb-6">
+  <div class="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+    <h2 class="text-lg font-semibold">Daily PnL · {{ first.date }} → {{ last.date }}</h2>
+    <div class="flex items-center gap-1.5 text-[11px] text-ink-muted dark:text-night-muted">
+      <span class="mr-1">Loss</span>
+      <span class="qt-hm-cell qt-hm-loss-3 w-3 h-3 rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-loss-2 w-3 h-3 rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-loss-1 w-3 h-3 rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-flat w-3 h-3 rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-win-1 w-3 h-3 rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-win-2 w-3 h-3 rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-win-3 w-3 h-3 rounded-sm inline-block"></span>
+      <span class="ml-1">Win</span>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto py-1">
+    <div class="qt-heatmap inline-grid gap-[3px]"
+         style="grid-template-rows: repeat(5, 18px); grid-auto-flow: column; grid-auto-columns: 18px;">
+      {%- for offset in (1..span_days) -%}
+        {%- assign idx = offset | minus: 1 -%}
+        {%- assign secs = idx | times: 86400 -%}
+        {%- assign cell_ts = anchor_ts | plus: secs -%}
+        {%- assign cell_wd = cell_ts | date: '%u' | plus: 0 -%}
+        {%- if cell_wd <= 5 -%}
+          {%- assign cell_date = cell_ts | date: '%Y-%m-%d' -%}
+          {%- assign matched = days_asc | where: 'date', cell_date | first -%}
+          {%- if matched -%}
+            <a class="qt-hm-cell rounded-sm block"
+               data-pnl="{{ matched.pnl }}"
+               data-date="{{ matched.date }}"
+               href="daily-trades/{{ matched.date }}.html"
+               title="{{ matched.date }} · {% if matched.pnl > 0 %}+{% endif %}{{ matched.pnl }} USD · {{ matched.trades }} trades"></a>
+          {%- else -%}
+            <span class="qt-hm-cell qt-hm-empty rounded-sm block"
+                  title="{{ cell_date }} · no data"></span>
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}

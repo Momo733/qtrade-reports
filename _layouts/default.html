@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" class="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+{%- seo title=false -%}
+
+<!-- Pre-paint dark mode toggle (avoids FOUC). -->
+<script>
+  (function(){
+    var k='qt-theme';
+    var saved=null; try { saved=localStorage.getItem(k); } catch(e){}
+    var sys=false;
+    try { sys = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch(e){}
+    var dark = (saved==='dark') || (saved==null && sys);
+    document.documentElement.classList.toggle('dark', dark);
+    window.qtSetTheme = function(t){
+      try { localStorage.setItem(k, t); } catch(e){}
+      document.documentElement.classList.toggle('dark', t==='dark');
+      window.dispatchEvent(new CustomEvent('qt-theme-change', { detail: { theme: t } }));
+    };
+    window.qtCurrentTheme = function(){
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    };
+  })();
+</script>
+
+<!-- Fonts. Preconnect for snappier first paint. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+
+<!-- Tailwind Play CDN with typography plugin. -->
+<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          win:        '#1f9d76',
+          'win-soft': 'rgba(31,157,118,0.12)',
+          loss:       '#d23f3f',
+          'loss-soft':'rgba(210,63,63,0.12)',
+          ink: {
+            DEFAULT: '#111827',
+            soft:    '#4b5563',
+            muted:   '#6b7280',
+            line:    '#e5e7eb',
+          },
+          surface:    '#ffffff',
+          canvas:     '#f7f8fa',
+          night: {
+            bg:      '#0b1117',
+            surface: '#11181f',
+            line:    '#1f2730',
+            ink:     '#e5e9f0',
+            soft:    '#9ca3af',
+            muted:   '#6b7280',
+          }
+        },
+        fontFamily: {
+          sans: ['Inter', 'Noto Sans SC', 'system-ui', '-apple-system', 'sans-serif'],
+          mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'monospace'],
+        },
+        boxShadow: {
+          card:      '0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
+          'card-dk': '0 1px 2px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.5)',
+        },
+      }
+    }
+  };
+</script>
+
+<link rel="stylesheet" href="{{ '/assets/css/tweaks.css' | relative_url }}">
+</head>
+
+<body class="font-sans bg-canvas text-ink antialiased dark:bg-night-bg dark:text-night-ink min-h-screen">
+
+{% include header.html %}
+
+<main class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16">
+  {{ content }}
+</main>
+
+<footer class="border-t border-ink-line dark:border-night-line mt-12 py-6 text-xs text-ink-muted dark:text-night-muted">
+  <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center gap-4 justify-between">
+    <span>Auto-generated · do not edit by hand</span>
+    <span>Site updated {{ site.time | date: '%Y-%m-%d %H:%M %Z' }}</span>
+  </div>
+</footer>
+
+<script src="{{ '/assets/js/sort.js' | relative_url }}" defer></script>
+<script src="{{ '/assets/js/heatmap.js' | relative_url }}" defer></script>
+</body>
+</html>

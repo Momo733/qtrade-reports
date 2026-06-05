@@ -1,0 +1,85 @@
+/* Heatmap bucket colors. Light mode uses GitHub-style green/red ramps;
+   dark mode uses brighter saturation to remain readable on #0b1117. */
+.qt-hm-cell        { transition: transform .08s ease; }
+.qt-hm-cell:hover  { transform: scale(1.18); outline: 1px solid rgba(0,0,0,0.15); }
+.qt-hm-empty       { background: #eef0f3; }
+.qt-hm-flat        { background: #d6dbe1; }
+.qt-hm-win-1       { background: #c6e6d4; }
+.qt-hm-win-2       { background: #6fc699; }
+.qt-hm-win-3       { background: #1f9d76; }
+.qt-hm-loss-1      { background: #f3c8c8; }
+.qt-hm-loss-2      { background: #e07a7a; }
+.qt-hm-loss-3      { background: #d23f3f; }
+
+html.dark .qt-hm-empty { background: #161d26; }
+html.dark .qt-hm-flat  { background: #232b36; }
+html.dark .qt-hm-win-1 { background: #163d31; }
+html.dark .qt-hm-win-2 { background: #1f9d76; }
+html.dark .qt-hm-win-3 { background: #4ad29f; }
+html.dark .qt-hm-loss-1{ background: #3a1d1d; }
+html.dark .qt-hm-loss-2{ background: #c54040; }
+html.dark .qt-hm-loss-3{ background: #ef6262; }
+html.dark .qt-hm-cell:hover { outline: 1px solid rgba(255,255,255,0.25); }
+
+/* Sortable table indicators. */
+table.qt-trade-table thead th[data-sortable]::after {
+  content: "↕";
+  margin-left: 4px;
+  opacity: 0.35;
+  font-size: 11px;
+  font-family: monospace;
+}
+table.qt-trade-table thead th[data-sort-dir="asc"]::after { content: "↑"; opacity: 1; }
+table.qt-trade-table thead th[data-sort-dir="desc"]::after { content: "↓"; opacity: 1; }
+
+/* Compact markdown sections (qt-md) — prose theme tweaks. */
+.qt-md table {
+  font-size: 12.5px;
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  border-collapse: collapse;
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+  width: auto;
+}
+.qt-md table th, .qt-md table td {
+  padding: 4px 9px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: right;
+  vertical-align: middle;
+}
+.qt-md table th:first-child, .qt-md table td:first-child { text-align: left; }
+.qt-md table th {
+  background: #f6f8fa;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb;
+}
+html.dark .qt-md table th { background: #11181f; color: #9ca3af; border-bottom-color: #1f2730; }
+html.dark .qt-md table td { border-bottom-color: #1f2730; }
+
+.qt-md details > summary { list-style: none; }
+.qt-md details > summary::marker { content: ''; }
+.qt-md details > summary::-webkit-details-marker { display: none; }
+.qt-md details > summary::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: 0.5em;
+  transition: transform .12s ease;
+  font-size: 0.8em;
+  color: #6b7280;
+}
+.qt-md details[open] > summary::before { transform: rotate(90deg); }
+
+/* Hide the first H1 from the source markdown — we own the hero in the layout. */
+.qt-md > h1:first-child { display: none; }
+
+/* Tighter prose font for daily content. */
+.qt-md.prose { color: inherit; }
+.qt-md.prose h2 { font-size: 1.15rem; margin-top: 1.2rem; margin-bottom: 0.4rem; }
+.qt-md.prose h3 { font-size: 1rem;    margin-top: 0.9rem; margin-bottom: 0.3rem; }
+.qt-md.prose code { font-size: 0.85em; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.05); }
+html.dark .qt-md.prose code { background: rgba(255,255,255,0.07); }
