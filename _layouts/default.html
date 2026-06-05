@@ -1,19 +1,21 @@
 <!DOCTYPE html>
-<html lang="zh-Hans" class="">
+<html lang="zh-Hans" class="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
 {%- seo title=false -%}
 
-<!-- Pre-paint dark mode toggle (avoids FOUC). -->
+<!--
+  TradingView-style palette. Defaults to dark (the canonical TV look); a tiny
+  pre-paint script honors the saved preference so light mode also paints
+  immediately without FOUC.
+-->
 <script>
   (function(){
     var k='qt-theme';
     var saved=null; try { saved=localStorage.getItem(k); } catch(e){}
-    var sys=false;
-    try { sys = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch(e){}
-    var dark = (saved==='dark') || (saved==null && sys);
+    var dark = (saved == null) ? true : (saved !== 'light');
     document.documentElement.classList.toggle('dark', dark);
     window.qtSetTheme = function(t){
       try { localStorage.setItem(k, t); } catch(e){}
@@ -26,47 +28,60 @@
   })();
 </script>
 
-<!-- Fonts. Preconnect for snappier first paint. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 
-<!-- Tailwind Play CDN with typography plugin. -->
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 <script>
+  // TradingView color tokens, matching the dark/light themes of tradingview.com.
   tailwind.config = {
     darkMode: 'class',
     theme: {
       extend: {
         colors: {
-          win:        '#1f9d76',
-          'win-soft': 'rgba(31,157,118,0.12)',
-          loss:       '#d23f3f',
-          'loss-soft':'rgba(210,63,63,0.12)',
-          ink: {
-            DEFAULT: '#111827',
-            soft:    '#4b5563',
-            muted:   '#6b7280',
-            line:    '#e5e7eb',
-          },
-          surface:    '#ffffff',
-          canvas:     '#f7f8fa',
+          // Bull / bear — the iconic TradingView candle colors.
+          up:       '#26a69a',
+          'up-soft':'rgba(38,166,154,0.14)',
+          'up-dim': '#0e6e64',
+          down:     '#ef5350',
+          'down-soft':'rgba(239,83,80,0.14)',
+          'down-dim': '#7e2b30',
+          // Accent — TradingView's signature blue link/button.
+          accent:    '#2962ff',
+          'accent-2':'#1e53e5',
+          // Light mode neutrals.
+          bg:        '#ffffff',
+          surface:   '#f8f9fd',
+          'surface-alt': '#f0f3fa',
+          line:      '#e0e3eb',
+          ink:       '#131722',
+          'ink-soft':'#4a5160',
+          'ink-mute':'#787b86',
+          // Dark mode neutrals — TradingView's exact tokens.
           night: {
-            bg:      '#0b1117',
-            surface: '#11181f',
-            line:    '#1f2730',
-            ink:     '#e5e9f0',
-            soft:    '#9ca3af',
-            muted:   '#6b7280',
-          }
+            bg:      '#131722',   // page background
+            surface: '#1e222d',   // primary card
+            'surface-2': '#22262f', // sticky bars, headers
+            line:    '#2a2e39',
+            'line-2':'#363a45',
+            ink:     '#d1d4dc',
+            'ink-hi':'#ffffff',
+            soft:    '#9598a1',
+            mute:    '#787b86',
+          },
         },
         fontFamily: {
           sans: ['Inter', 'Noto Sans SC', 'system-ui', '-apple-system', 'sans-serif'],
           mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'monospace'],
         },
+        fontSize: {
+          xxs: ['10px', '14px'],
+        },
         boxShadow: {
-          card:      '0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
-          'card-dk': '0 1px 2px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.5)',
+          'tv':     '0 1px 2px rgba(0,0,0,0.04)',
+          'tv-dk':  '0 1px 0 rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.02)',
+          'glow':   '0 0 0 1px rgba(41,98,255,0.4), 0 0 24px rgba(41,98,255,0.18)',
         },
       }
     }
@@ -76,17 +91,17 @@
 <link rel="stylesheet" href="{{ '/assets/css/tweaks.css' | relative_url }}">
 </head>
 
-<body class="font-sans bg-canvas text-ink antialiased dark:bg-night-bg dark:text-night-ink min-h-screen">
+<body class="font-sans bg-bg text-ink antialiased dark:bg-night-bg dark:text-night-ink min-h-screen tabular-nums">
 
 {% include header.html %}
 
-<main class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16">
+<main class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16">
   {{ content }}
 </main>
 
-<footer class="border-t border-ink-line dark:border-night-line mt-12 py-6 text-xs text-ink-muted dark:text-night-muted">
-  <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center gap-4 justify-between">
-    <span>Auto-generated · do not edit by hand</span>
+<footer class="border-t border-line dark:border-night-line mt-12">
+  <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-4 text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute flex flex-wrap items-center gap-3 justify-between">
+    <span>Auto-generated · for personal review only</span>
     <span>Site updated {{ site.time | date: '%Y-%m-%d %H:%M %Z' }}</span>
   </div>
 </footer>

@@ -7,119 +7,140 @@ layout: default
 {%- assign next_day = nil -%}
 {%- for entry in all_days -%}
   {%- if entry.date == d -%}
-    {%- assign idx = forloop.index0 -%}
     {%- if forloop.index0 > 0 -%}
       {%- assign prev_idx = forloop.index0 | minus: 1 -%}
       {%- assign prev_day = all_days[prev_idx] -%}
     {%- endif -%}
-    {%- if forloop.last == false -%}
+    {%- unless forloop.last -%}
       {%- assign next_idx = forloop.index0 | plus: 1 -%}
       {%- assign next_day = all_days[next_idx] -%}
-    {%- endif -%}
+    {%- endunless -%}
   {%- endif -%}
 {%- endfor -%}
 
 {%- assign pnl = page.pnl | default: 0 -%}
-{%- if pnl > 0 -%}{% assign pnl_klass = 'text-win' %}{% assign pnl_sign = '+' %}
-{%- elsif pnl < 0 -%}{% assign pnl_klass = 'text-loss' %}{% assign pnl_sign = '' %}
-{%- else -%}{% assign pnl_klass = 'text-ink-soft dark:text-night-soft' %}{% assign pnl_sign = '' %}{% endif -%}
+{%- if pnl > 0 -%}
+  {%- assign pnl_klass = 'text-up' -%}{%- assign pnl_sign = '+' -%}{%- assign pnl_chg = '▲' -%}
+{%- elsif pnl < 0 -%}
+  {%- assign pnl_klass = 'text-down' -%}{%- assign pnl_sign = '' -%}{%- assign pnl_chg = '▼' -%}
+{%- else -%}
+  {%- assign pnl_klass = 'text-ink-mute dark:text-night-mute' -%}{%- assign pnl_sign = '' -%}{%- assign pnl_chg = '◆' -%}
+{%- endif -%}
 
-<!-- Sticky day navigation -->
-<nav class="flex items-center justify-between gap-3 mb-6 text-sm sticky top-[58px] z-10 backdrop-blur bg-canvas/85 dark:bg-night-bg/85 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-2 border-b border-ink-line dark:border-night-line">
+<!-- TradingView-style day navigator strip -->
+<nav class="flex items-stretch justify-between gap-2 mb-3 text-xs font-mono">
   <div class="flex-1 min-w-0">
     {% if prev_day %}
       <a href="{{ prev_day.date }}.html"
-         class="inline-flex items-center gap-1.5 px-2 py-1 -ml-2 rounded hover:bg-ink-line/40 dark:hover:bg-night-line/60 text-ink-soft dark:text-night-soft">
-        <span aria-hidden="true">←</span>
-        <span class="font-mono">{{ prev_day.date }}</span>
-        <span class="hidden sm:inline-block text-ink-muted">
-          {% if prev_day.pnl > 0 %}<span class="text-win">+{{ prev_day.pnl }}</span>
-          {% elsif prev_day.pnl < 0 %}<span class="text-loss">{{ prev_day.pnl }}</span>
-          {% else %}0{% endif %}
+         class="inline-flex items-center gap-2 px-3 h-9 rounded-sm border border-line dark:border-night-line bg-surface dark:bg-night-surface hover:border-accent dark:hover:border-accent transition-colors">
+        <span aria-hidden="true" class="text-ink-mute dark:text-night-mute">←</span>
+        <span class="text-ink-soft dark:text-night-soft">{{ prev_day.date }}</span>
+        <span class="{% if prev_day.pnl > 0 %}text-up{% elsif prev_day.pnl < 0 %}text-down{% else %}text-ink-mute{% endif %}">
+          {% if prev_day.pnl > 0 %}+{% endif %}{{ prev_day.pnl }}
         </span>
       </a>
     {% endif %}
   </div>
-  <a href="{{ '/' | relative_url }}" class="text-ink-muted dark:text-night-muted hover:text-ink dark:hover:text-night-ink">Home</a>
+  <a href="{{ '/' | relative_url }}" class="inline-flex items-center gap-1.5 px-3 h-9 rounded-sm border border-line dark:border-night-line bg-surface dark:bg-night-surface text-ink-soft dark:text-night-soft hover:border-accent dark:hover:border-accent">
+    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+    <span>Home</span>
+  </a>
   <div class="flex-1 min-w-0 text-right">
     {% if next_day %}
       <a href="{{ next_day.date }}.html"
-         class="inline-flex items-center gap-1.5 px-2 py-1 -mr-2 rounded hover:bg-ink-line/40 dark:hover:bg-night-line/60 text-ink-soft dark:text-night-soft">
-        <span class="hidden sm:inline-block text-ink-muted">
-          {% if next_day.pnl > 0 %}<span class="text-win">+{{ next_day.pnl }}</span>
-          {% elsif next_day.pnl < 0 %}<span class="text-loss">{{ next_day.pnl }}</span>
-          {% else %}0{% endif %}
+         class="inline-flex items-center gap-2 px-3 h-9 rounded-sm border border-line dark:border-night-line bg-surface dark:bg-night-surface hover:border-accent dark:hover:border-accent transition-colors">
+        <span class="{% if next_day.pnl > 0 %}text-up{% elsif next_day.pnl < 0 %}text-down{% else %}text-ink-mute{% endif %}">
+          {% if next_day.pnl > 0 %}+{% endif %}{{ next_day.pnl }}
         </span>
-        <span class="font-mono">{{ next_day.date }}</span>
-        <span aria-hidden="true">→</span>
+        <span class="text-ink-soft dark:text-night-soft">{{ next_day.date }}</span>
+        <span aria-hidden="true" class="text-ink-mute dark:text-night-mute">→</span>
       </a>
     {% endif %}
   </div>
 </nav>
 
-<!-- Hero -->
-<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-6 sm:p-8 mb-6">
-  <div class="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-    <h1 class="text-2xl sm:text-3xl font-semibold font-mono tracking-tight">{{ d }}</h1>
-    <span class="text-xs uppercase tracking-wider text-ink-muted dark:text-night-muted">QQQ · 1-min</span>
-  </div>
-  <div class="mt-4 flex flex-wrap items-end gap-x-8 gap-y-3">
-    <div>
-      <div class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted mb-1">Daily PnL (USD)</div>
-      <div class="font-mono text-4xl sm:text-5xl font-bold {{ pnl_klass }} leading-none">
-        {{ pnl_sign }}{{ pnl }}
+<!-- TradingView-style asset header / quote bar -->
+<section class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk p-4 sm:p-5 mb-3">
+  <div class="flex flex-wrap items-end justify-between gap-y-3 gap-x-6">
+    <!-- Asset identity -->
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-accent/15 text-accent font-bold text-sm">Q</span>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="font-mono font-semibold text-lg text-ink dark:text-night-ink-hi">QQQ</span>
+          <span class="tv-chip">Daily Review</span>
+        </div>
+        <div class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute mt-0.5">{{ d }} · {% if page.first_entry_et %}{{ page.first_entry_et }} ET → {{ page.last_exit_et | default: '—' }} ET{% else %}1-min · ET{% endif %}</div>
       </div>
     </div>
-    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3 text-sm">
-      <div>
-        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Trades</dt>
-        <dd class="font-mono text-xl">{{ page.trades | default: 0 }}</dd>
+
+    <!-- Big PnL number -->
+    <div class="flex items-baseline gap-3">
+      <div class="font-mono text-4xl sm:text-5xl font-bold leading-none {{ pnl_klass }}">
+        {{ pnl_sign }}{{ pnl }}
       </div>
-      <div>
-        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">W / L / BE</dt>
-        <dd class="font-mono text-xl">
-          <span class="text-win">{{ page.wins | default: 0 }}</span>
-          <span class="text-ink-muted">/</span>
-          <span class="text-loss">{{ page.losses | default: 0 }}</span>
-          <span class="text-ink-muted">/</span>
-          <span>{{ page.breakeven | default: 0 }}</span>
-        </dd>
+      <div class="text-xs">
+        <div class="font-mono {{ pnl_klass }}">{{ pnl_chg }} USD</div>
+        <div class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Realized PnL</div>
       </div>
-      <div>
-        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Win rate</dt>
-        <dd class="font-mono text-xl">{% if page.trades and page.trades > 0 %}{{ page.win_rate | times: 100 | round: 0 }}%{% else %}—{% endif %}</dd>
-      </div>
-      <div>
-        <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Best / Worst</dt>
-        <dd class="font-mono text-sm">
-          {% if page.biggest_win %}<span class="text-win">+{{ page.biggest_win }}</span>{% else %}—{% endif %}
-          <span class="text-ink-muted mx-1">·</span>
-          {% if page.biggest_loss %}<span class="text-loss">{{ page.biggest_loss }}</span>{% else %}—{% endif %}
-        </dd>
-      </div>
-    </dl>
+    </div>
   </div>
+
+  <!-- Stats grid (TradingView "Key Stats" style) -->
+  <dl class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-3 mt-5 pt-4 border-t border-line dark:border-night-line text-sm">
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Trades</dt>
+      <dd class="font-mono text-base text-ink dark:text-night-ink-hi mt-0.5">{{ page.trades | default: 0 }}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Win / Loss</dt>
+      <dd class="font-mono text-base mt-0.5">
+        <span class="text-up">{{ page.wins | default: 0 }}</span>
+        <span class="text-ink-mute">/</span>
+        <span class="text-down">{{ page.losses | default: 0 }}</span>{% if page.breakeven and page.breakeven > 0 %}<span class="text-ink-mute"> · {{ page.breakeven }}BE</span>{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Win Rate</dt>
+      <dd class="font-mono text-base text-ink dark:text-night-ink-hi mt-0.5">{% if page.trades and page.trades > 0 %}{{ page.win_rate | times: 100 | round: 0 }}%{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Best</dt>
+      <dd class="font-mono text-base mt-0.5">{% if page.biggest_win %}<span class="text-up">+{{ page.biggest_win }}</span>{% else %}<span class="text-ink-mute">—</span>{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Worst</dt>
+      <dd class="font-mono text-base mt-0.5">{% if page.biggest_loss %}<span class="text-down">{{ page.biggest_loss }}</span>{% else %}<span class="text-ink-mute">—</span>{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Max DD</dt>
+      <dd class="font-mono text-base mt-0.5">{% if page.max_drawdown_usd and page.max_drawdown_usd < 0 %}<span class="text-down">{{ page.max_drawdown_usd }}</span>{% else %}<span class="text-ink-mute">0</span>{% endif %}</dd>
+    </div>
+  </dl>
 </section>
 
-<!-- Chart embed (full-width inside the page container) -->
+<!-- Chart panel -->
 {% if page.has_chart %}
-<section class="mb-6">
+<section class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk overflow-hidden mb-3">
+  <div class="flex items-center justify-between px-3.5 py-2 border-b border-line dark:border-night-line bg-surface-alt dark:bg-night-surface-2">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-1 h-3 bg-accent rounded-sm"></span>
+      <span class="text-xxs uppercase tracking-widest font-semibold text-ink-soft dark:text-night-soft">QQQ · 1-min · {{ d }}</span>
+    </div>
+    <div class="flex items-center gap-3 text-xxs text-ink-mute dark:text-night-mute">
+      <span class="hidden sm:inline">▲ entry · ✕ stop · ★ trail · ● trend · ◆ timeout · ⬢ climax</span>
+      <a href="{{ page.chart }}" target="_blank" rel="noopener" class="px-2 py-0.5 rounded-sm border border-line dark:border-night-line hover:border-accent dark:hover:border-accent hover:text-accent">Open</a>
+    </div>
+  </div>
   <iframe id="daily-chart"
           src="{{ page.chart }}"
-          class="block w-full rounded-2xl border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk bg-surface dark:bg-night-surface
-                 h-[70vh] min-h-[460px] sm:h-[82vh] sm:min-h-[640px]"
+          class="block w-full bg-surface dark:bg-night-surface h-[68vh] min-h-[480px] sm:h-[78vh] sm:min-h-[640px]"
           loading="lazy"
           title="{{ d }} interactive chart"></iframe>
-  <div class="mt-2 text-xs text-ink-muted dark:text-night-muted flex flex-wrap items-center gap-x-4">
-    <a href="{{ page.chart }}" class="text-ink-soft hover:text-ink dark:text-night-soft dark:hover:text-night-ink underline-offset-2 hover:underline">
-      全屏打开交互图 →
-    </a>
-    <span class="opacity-60">Tip: hover a marker on the chart for trade details · click + drag to pan · scroll to zoom</span>
-  </div>
 </section>
 
 <script>
-  // Forward dark/light theme to the chart iframe so it can recolor.
+  // Hand the chart iframe a theme so it can recolor in lockstep.
   (function(){
     var ifr = document.getElementById('daily-chart');
     if (!ifr) return;
@@ -132,12 +153,17 @@ layout: default
 </script>
 {% endif %}
 
-<!-- Source markdown (trade tables, K-line, runtime config, shadow obs). -->
-<section class="prose prose-sm sm:prose dark:prose-invert max-w-none qt-md">
-  {{ content }}
+<!-- Source markdown — trade table + verbose sections fold into <details>. -->
+<section class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk px-4 py-4 sm:px-5 sm:py-5">
+  <div class="text-xxs uppercase tracking-widest font-semibold text-ink-soft dark:text-night-soft mb-3 flex items-center gap-2">
+    <span class="inline-block w-1 h-3 bg-accent rounded-sm"></span>
+    Trade Log
+  </div>
+  <section class="prose prose-sm sm:prose dark:prose-invert qt-md">
+    {{ content }}
+  </section>
 </section>
 
-<!-- After Liquid renders the markdown, fold verbose H2 sections into <details>. -->
 <script>
 (function(){
   var FOLD_TITLES = [
@@ -157,14 +183,13 @@ layout: default
   headings.forEach(function(h2){
     if (!shouldFold(h2.textContent)) return;
     var details = document.createElement('details');
-    details.className = 'my-3 rounded-lg border border-ink-line dark:border-night-line bg-surface dark:bg-night-surface';
+    details.className = 'my-2 rounded-sm border border-line dark:border-night-line bg-bg dark:bg-night-bg/60';
     var summary = document.createElement('summary');
-    summary.className = 'px-4 py-2.5 cursor-pointer select-none text-sm font-semibold text-ink-soft dark:text-night-soft hover:bg-ink-line/30 dark:hover:bg-night-line/40 rounded-lg';
+    summary.className = 'px-3 py-2 cursor-pointer select-none text-xs font-semibold uppercase tracking-widest text-ink-soft dark:text-night-soft hover:bg-line/40 dark:hover:bg-night-line/60 rounded-sm';
     summary.textContent = h2.textContent.trim();
     details.appendChild(summary);
     var wrap = document.createElement('div');
-    wrap.className = 'px-4 pb-3 pt-1';
-    // Move siblings until next H2 or end into the details
+    wrap.className = 'px-3 pb-3 pt-1';
     var sib = h2.nextSibling;
     while (sib && !(sib.nodeType === 1 && sib.tagName === 'H2')) {
       var nxt = sib.nextSibling;
@@ -174,27 +199,28 @@ layout: default
     details.appendChild(wrap);
     h2.parentNode.replaceChild(details, h2);
   });
-  // Tag trade-table heads with sortable attributes.
+  // Sortable / color-coded trade table.
   var tables = root.querySelectorAll('table');
   tables.forEach(function(t){
     t.classList.add('qt-table');
     var firstHeader = t.querySelector('thead th, tr th');
     if (firstHeader && /^#?$/.test(firstHeader.textContent.trim())) {
-      // Likely the trade table — make headers sortable.
       t.classList.add('qt-trade-table');
-      Array.prototype.forEach.call(t.querySelectorAll('thead th'), function(th, i){
+      Array.prototype.forEach.call(t.querySelectorAll('thead th'), function(th){
         th.setAttribute('data-sortable','1');
-        th.classList.add('cursor-pointer','select-none','hover:bg-ink-line/40','dark:hover:bg-night-line/60');
+        th.classList.add('cursor-pointer','select-none','hover:text-accent');
       });
     }
   });
-  // Color PnL cells (find any cell whose text looks like ±NNN.NN)
   Array.prototype.forEach.call(root.querySelectorAll('td'), function(td){
     var s = td.textContent.trim();
     if (/^[+\-]\d/.test(s)) {
-      if (s.charAt(0) === '+') td.classList.add('text-win','font-semibold');
-      else if (s.charAt(0) === '-') td.classList.add('text-loss','font-semibold');
+      if (s.charAt(0) === '+') td.classList.add('text-up','font-semibold');
+      else td.classList.add('text-down','font-semibold');
     }
+    // Color call/put direction strings.
+    if (/^call$/i.test(s)) td.classList.add('text-up','font-semibold');
+    if (/^put$/i.test(s))  td.classList.add('text-down','font-semibold');
   });
 })();
 </script>

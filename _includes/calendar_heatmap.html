@@ -1,7 +1,7 @@
 {%- comment -%}
-  PnL calendar heatmap. Cells flow top-to-bottom Mon..Fri then to the next
-  column (= next ISO week). Color buckets assigned client-side by
-  assets/js/heatmap.js based on data-pnl.
+  TradingView-style PnL calendar. Cells laid out column-by-column (one column
+  per ISO week, Mon..Fri rows), color buckets assigned by assets/js/heatmap.js
+  from data-pnl.
 {%- endcomment -%}
 
 {%- assign days_asc = site.data.days | sort: 'date' -%}
@@ -11,32 +11,34 @@
 {%- assign first_ts = first.date | append: 'T00:00:00Z' | date: '%s' | plus: 0 -%}
 {%- assign last_ts  = last.date  | append: 'T00:00:00Z' | date: '%s' | plus: 0 -%}
 
-{%- comment -%} Anchor to the Monday on/before `first` so weeks line up. {%- endcomment -%}
 {%- assign first_wd = first.date | append: 'T00:00:00Z' | date: '%u' | plus: 0 -%}
 {%- assign back_secs = first_wd | minus: 1 | times: 86400 -%}
 {%- assign anchor_ts = first_ts | minus: back_secs -%}
 
 {%- assign span_days = last_ts | minus: anchor_ts | divided_by: 86400 | plus: 1 -%}
 
-<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-4 sm:p-6 mb-6">
-  <div class="flex items-baseline justify-between mb-4 flex-wrap gap-2">
-    <h2 class="text-lg font-semibold">Daily PnL · {{ first.date }} → {{ last.date }}</h2>
-    <div class="flex items-center gap-1.5 text-[11px] text-ink-muted dark:text-night-muted">
-      <span class="mr-1">Loss</span>
-      <span class="qt-hm-cell qt-hm-loss-3 w-3 h-3 rounded-sm inline-block"></span>
-      <span class="qt-hm-cell qt-hm-loss-2 w-3 h-3 rounded-sm inline-block"></span>
-      <span class="qt-hm-cell qt-hm-loss-1 w-3 h-3 rounded-sm inline-block"></span>
-      <span class="qt-hm-cell qt-hm-flat w-3 h-3 rounded-sm inline-block"></span>
-      <span class="qt-hm-cell qt-hm-win-1 w-3 h-3 rounded-sm inline-block"></span>
-      <span class="qt-hm-cell qt-hm-win-2 w-3 h-3 rounded-sm inline-block"></span>
-      <span class="qt-hm-cell qt-hm-win-3 w-3 h-3 rounded-sm inline-block"></span>
-      <span class="ml-1">Win</span>
+<section class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk px-4 py-3 sm:px-5 sm:py-4 mb-3">
+  <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+    <div>
+      <div class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute mb-0.5">Daily PnL Calendar</div>
+      <div class="text-[12px] font-mono text-ink-soft dark:text-night-soft">{{ first.date }} → {{ last.date }}</div>
+    </div>
+    <div class="flex items-center gap-1.5 text-xxs text-ink-mute dark:text-night-mute">
+      <span class="mr-1 uppercase tracking-widest">Loss</span>
+      <span class="qt-hm-cell qt-hm-loss-3 w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-loss-2 w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-loss-1 w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-flat   w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-win-1  w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-win-2  w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="qt-hm-cell qt-hm-win-3  w-[10px] h-[10px] rounded-sm inline-block"></span>
+      <span class="ml-1 uppercase tracking-widest">Win</span>
     </div>
   </div>
 
   <div class="overflow-x-auto py-1">
     <div class="qt-heatmap inline-grid gap-[3px]"
-         style="grid-template-rows: repeat(5, 18px); grid-auto-flow: column; grid-auto-columns: 18px;">
+         style="grid-template-rows: repeat(5, 16px); grid-auto-flow: column; grid-auto-columns: 16px;">
       {%- for offset in (1..span_days) -%}
         {%- assign idx = offset | minus: 1 -%}
         {%- assign secs = idx | times: 86400 -%}

@@ -4,6 +4,8 @@ layout: default
 {%- assign days = site.data.days | sort: 'date' | reverse -%}
 {%- assign total_pnl = 0 -%}
 {%- assign total_trades = 0 -%}
+{%- assign total_wins = 0 -%}
+{%- assign total_losses = 0 -%}
 {%- assign win_days = 0 -%}
 {%- assign loss_days = 0 -%}
 {%- assign flat_days = 0 -%}
@@ -12,6 +14,8 @@ layout: default
 {%- for d in days -%}
   {%- assign total_pnl = total_pnl | plus: d.pnl -%}
   {%- assign total_trades = total_trades | plus: d.trades -%}
+  {%- assign total_wins = total_wins | plus: d.wins -%}
+  {%- assign total_losses = total_losses | plus: d.losses -%}
   {%- if d.pnl > 0 -%}{% assign win_days = win_days | plus: 1 %}{% endif -%}
   {%- if d.pnl < 0 -%}{% assign loss_days = loss_days | plus: 1 %}{% endif -%}
   {%- if d.pnl == 0 -%}{% assign flat_days = flat_days | plus: 1 %}{% endif -%}
@@ -19,52 +23,66 @@ layout: default
   {%- if d.pnl < worst_day.pnl -%}{% assign worst_day = d %}{% endif -%}
 {%- endfor -%}
 
-<!-- Hero: all-time stats -->
-<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-6 sm:p-8 mb-6">
-  <div class="flex flex-wrap items-baseline gap-x-4 gap-y-2 mb-4">
-    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">{{ site.title }}</h1>
-    <span class="text-xs uppercase tracking-wider text-ink-muted dark:text-night-muted">Personal review · {{ days | size }} 天</span>
+{%- if total_pnl > 0 -%}{% assign total_klass = 'text-up' %}{% assign total_sign = '+' %}{% assign total_arrow = '▲' -%}
+{%- elsif total_pnl < 0 -%}{% assign total_klass = 'text-down' %}{% assign total_sign = '' %}{% assign total_arrow = '▼' -%}
+{%- else -%}{% assign total_klass = 'text-ink-mute dark:text-night-mute' %}{% assign total_sign = '' %}{% assign total_arrow = '◆' -%}{%- endif -%}
+
+<!-- TradingView "Quote header" — big number, key stats inline. -->
+<section class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk p-4 sm:p-6 mb-3">
+  <div class="flex flex-wrap items-end justify-between gap-y-4 gap-x-6">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent/15 text-accent font-bold">Q</span>
+      <div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-mono font-semibold text-xl text-ink dark:text-night-ink-hi">QQQ · 0DTE Options</span>
+          <span class="tv-chip">Daily Review</span>
+        </div>
+        <div class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute mt-1">Total · {{ days | size }} sessions · personal review</div>
+      </div>
+    </div>
+
+    <div class="flex items-baseline gap-3">
+      <div class="font-mono text-4xl sm:text-5xl font-bold leading-none {{ total_klass }}">
+        {{ total_sign }}{{ total_pnl | round: 2 }}
+      </div>
+      <div class="text-xs">
+        <div class="font-mono {{ total_klass }}">{{ total_arrow }} USD</div>
+        <div class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Cumulative</div>
+      </div>
+    </div>
   </div>
-  <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-4">
+
+  <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 mt-5 pt-4 border-t border-line dark:border-night-line text-sm">
     <div>
-      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Total PnL</dt>
-      <dd class="font-mono text-3xl sm:text-4xl font-bold leading-none mt-1
-                 {% if total_pnl > 0 %}text-win{% elsif total_pnl < 0 %}text-loss{% else %}text-ink-soft{% endif %}">
-        {% if total_pnl > 0 %}+{% endif %}{{ total_pnl | round: 2 }}
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Sessions</dt>
+      <dd class="font-mono text-base text-ink dark:text-night-ink-hi mt-0.5">{{ days | size }}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Win Days</dt>
+      <dd class="font-mono text-base mt-0.5"><span class="text-up">{{ win_days }}</span><span class="text-ink-mute">/</span><span class="text-down">{{ loss_days }}</span>{% if flat_days > 0 %}<span class="text-ink-mute"> · {{ flat_days }}—</span>{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Win-day %</dt>
+      <dd class="font-mono text-base text-ink dark:text-night-ink-hi mt-0.5">{% if days.size > 0 %}{{ win_days | times: 100 | divided_by: days.size }}%{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Trades</dt>
+      <dd class="font-mono text-base text-ink dark:text-night-ink-hi mt-0.5">{{ total_trades }}</dd>
+    </div>
+    <div>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Best · Worst</dt>
+      <dd class="font-mono text-sm mt-0.5">
+        {% if best_day.pnl > 0 %}<span class="text-up">+{{ best_day.pnl }}</span>{% else %}—{% endif %}
+        <span class="text-ink-mute mx-1">·</span>
+        {% if worst_day.pnl < 0 %}<span class="text-down">{{ worst_day.pnl }}</span>{% else %}—{% endif %}
       </dd>
     </div>
     <div>
-      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Win-day rate</dt>
-      <dd class="font-mono text-3xl sm:text-4xl font-bold leading-none mt-1">
-        {% if days.size > 0 %}{{ win_days | times: 100 | divided_by: days.size }}%{% else %}—{% endif %}
-        <span class="text-sm font-normal text-ink-muted dark:text-night-muted ml-2">
-          {{ win_days }}W / {{ loss_days }}L{% if flat_days > 0 %} / {{ flat_days }}—{% endif %}
-        </span>
+      <dt class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute">Latest</dt>
+      <dd class="font-mono text-sm mt-0.5">
+        {% assign latest = days | first %}
+        {% if latest %}<a href="daily-trades/{{ latest.date }}.html" class="hover:text-accent">{{ latest.date }}</a>{% else %}—{% endif %}
       </dd>
-    </div>
-    <div>
-      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Best day</dt>
-      <dd class="font-mono text-base mt-1">
-        {% if best_day.pnl > 0 %}<span class="text-win font-bold">+{{ best_day.pnl }}</span>
-        {% else %}—{% endif %}
-        {% if best_day %}<a href="daily-trades/{{ best_day.date }}.html" class="ml-2 text-ink-muted hover:text-ink dark:hover:text-night-ink underline-offset-2 hover:underline">{{ best_day.date }}</a>{% endif %}
-      </dd>
-    </div>
-    <div>
-      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Worst day</dt>
-      <dd class="font-mono text-base mt-1">
-        {% if worst_day.pnl < 0 %}<span class="text-loss font-bold">{{ worst_day.pnl }}</span>
-        {% else %}—{% endif %}
-        {% if worst_day %}<a href="daily-trades/{{ worst_day.date }}.html" class="ml-2 text-ink-muted hover:text-ink dark:hover:text-night-ink underline-offset-2 hover:underline">{{ worst_day.date }}</a>{% endif %}
-      </dd>
-    </div>
-    <div>
-      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Total trades</dt>
-      <dd class="font-mono text-base mt-1">{{ total_trades }}</dd>
-    </div>
-    <div>
-      <dt class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted">Days tracked</dt>
-      <dd class="font-mono text-base mt-1">{{ days | size }}</dd>
     </div>
   </dl>
 </section>
@@ -72,44 +90,48 @@ layout: default
 <!-- Calendar heatmap -->
 {% include calendar_heatmap.html %}
 
-<!-- Recent days list -->
-<section class="rounded-2xl bg-surface dark:bg-night-surface border border-ink-line dark:border-night-line shadow-card dark:shadow-card-dk p-4 sm:p-6 mb-6">
-  <div class="flex items-baseline justify-between mb-3">
-    <h2 class="text-lg font-semibold">All days</h2>
-    <span class="text-xs text-ink-muted dark:text-night-muted">click a column header to sort</span>
+<!-- All-days "Screener" table -->
+<section id="all-days" class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk overflow-hidden mb-3">
+  <div class="flex items-center justify-between px-3.5 py-2 border-b border-line dark:border-night-line bg-surface-alt dark:bg-night-surface-2">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-1 h-3 bg-accent rounded-sm"></span>
+      <span class="text-xxs uppercase tracking-widest font-semibold text-ink-soft dark:text-night-soft">Screener · All Sessions</span>
+    </div>
+    <span class="text-xxs text-ink-mute dark:text-night-mute hidden sm:inline">Click a column header to sort</span>
   </div>
   <div class="overflow-x-auto">
-    <table class="qt-table qt-trade-table w-full text-sm font-mono">
+    <table class="qt-table qt-trade-table w-full text-[12.5px] font-mono">
       <thead>
-        <tr class="text-[11px] uppercase tracking-widest text-ink-muted dark:text-night-muted text-left">
-          <th class="px-3 py-2" data-sortable="1">Date</th>
-          <th class="px-3 py-2 text-right" data-sortable="1">PnL</th>
-          <th class="px-3 py-2 text-right" data-sortable="1">Trades</th>
-          <th class="px-3 py-2 text-right" data-sortable="1">W / L / BE</th>
-          <th class="px-3 py-2 text-right" data-sortable="1">Win%</th>
-          <th class="px-3 py-2 text-right" data-sortable="1">Best</th>
-          <th class="px-3 py-2 text-right" data-sortable="1">Worst</th>
+        <tr class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute text-left bg-surface-alt dark:bg-night-surface-2 border-b border-line dark:border-night-line">
+          <th class="px-3 py-2 font-semibold" data-sortable="1">Date</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">PnL</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">Trades</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">W / L / BE</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">Win%</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">Best</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">Worst</th>
+          <th class="px-3 py-2 font-semibold text-right" data-sortable="1">Max DD</th>
+          <th class="px-3 py-2 font-semibold text-right hidden lg:table-cell" data-sortable="1">Session</th>
         </tr>
       </thead>
       <tbody>
         {% for d in days %}
-        <tr class="border-t border-ink-line dark:border-night-line hover:bg-ink-line/30 dark:hover:bg-night-line/40">
-          <td class="px-3 py-2"><a class="hover:underline" href="daily-trades/{{ d.date }}.html">{{ d.date }}</a></td>
-          <td class="px-3 py-2 text-right
-                 {% if d.pnl > 0 %}text-win font-semibold{% elsif d.pnl < 0 %}text-loss font-semibold{% else %}text-ink-muted{% endif %}">
-            {% if d.pnl > 0 %}+{% endif %}{{ d.pnl }}
-          </td>
+        <tr class="border-b border-line/60 dark:border-night-line/60 hover:bg-line/40 dark:hover:bg-night-line/40">
+          <td class="px-3 py-2"><a class="hover:text-accent" href="daily-trades/{{ d.date }}.html">{{ d.date }}</a></td>
+          <td class="px-3 py-2 text-right {% if d.pnl > 0 %}text-up font-semibold{% elsif d.pnl < 0 %}text-down font-semibold{% else %}text-ink-mute{% endif %}">{% if d.pnl > 0 %}+{% endif %}{{ d.pnl }}</td>
           <td class="px-3 py-2 text-right">{{ d.trades }}</td>
           <td class="px-3 py-2 text-right">
-            <span class="text-win">{{ d.wins | default: 0 }}</span>
-            <span class="text-ink-muted">/</span>
-            <span class="text-loss">{{ d.losses | default: 0 }}</span>
-            <span class="text-ink-muted">/</span>
+            <span class="text-up">{{ d.wins | default: 0 }}</span>
+            <span class="text-ink-mute">/</span>
+            <span class="text-down">{{ d.losses | default: 0 }}</span>
+            <span class="text-ink-mute">/</span>
             {{ d.breakeven | default: 0 }}
           </td>
           <td class="px-3 py-2 text-right">{% if d.trades and d.trades > 0 %}{{ d.win_rate | times: 100 | round: 0 }}%{% else %}—{% endif %}</td>
-          <td class="px-3 py-2 text-right">{% if d.biggest_win %}<span class="text-win">+{{ d.biggest_win }}</span>{% else %}—{% endif %}</td>
-          <td class="px-3 py-2 text-right">{% if d.biggest_loss %}<span class="text-loss">{{ d.biggest_loss }}</span>{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-right">{% if d.biggest_win %}<span class="text-up">+{{ d.biggest_win }}</span>{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-right">{% if d.biggest_loss %}<span class="text-down">{{ d.biggest_loss }}</span>{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-right">{% if d.max_drawdown_usd and d.max_drawdown_usd < 0 %}<span class="text-down">{{ d.max_drawdown_usd }}</span>{% else %}<span class="text-ink-mute">0</span>{% endif %}</td>
+          <td class="px-3 py-2 text-right hidden lg:table-cell text-ink-mute dark:text-night-mute">{% if d.first_entry_et %}{{ d.first_entry_et }} → {{ d.last_exit_et | default: '—' }}{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -117,6 +139,6 @@ layout: default
   </div>
 </section>
 
-<section class="prose prose-sm sm:prose dark:prose-invert max-w-none qt-md">
+<section class="prose prose-sm dark:prose-invert max-w-none qt-md">
   {{ content }}
 </section>
