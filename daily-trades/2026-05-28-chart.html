@@ -1,51 +1,169 @@
 <!DOCTYPE html>
-<!-- chart_schema=1 -->
+<!-- chart_schema=2 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <title>2026-05-28 — Daily Chart</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body { margin: 0; padding: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fafafa; }
-  h1 { font-size: 18px; margin: 0 0 8px; }
-  .meta { color: #555; font-size: 13px; margin-bottom: 12px; }
-  .legend { font-size: 12px; color: #333; margin-bottom: 8px; }
-  .legend span { display: inline-block; margin-right: 12px; }
-  #chart { width: 100%; height: 80vh; min-height: 600px; }
-  table.trades { border-collapse: collapse; margin-top: 16px; font-size: 12px; }
-  table.trades th, table.trades td { border: 1px solid #ddd; padding: 4px 8px; text-align: right; }
-  table.trades th { background: #f0f0f0; }
-  table.trades td.dir-call { color: #26a69a; font-weight: 600; }
-  table.trades td.dir-put  { color: #ef5350; font-weight: 600; }
-  table.trades tr.win  td.pnl { color: #26a69a; font-weight: 600; }
-  table.trades tr.loss td.pnl { color: #ef5350; font-weight: 600; }
+  :root {
+    --win:  #1f9d76;
+    --loss: #d23f3f;
+    --neutral: #6b7280;
+    --grid: #e5e7eb;
+    --bg:   #fafbfc;
+    --card: #ffffff;
+    --ink-1: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #6b7280;
+    --accent: #2563eb;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+  }
+  body {
+    padding: 18px 22px 28px;
+    box-sizing: border-box;
+  }
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px 16px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .page-head h1 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink-1);
+  }
+  .page-head .meta {
+    color: var(--ink-2);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-bottom: 10px;
+  }
+  .legend strong { color: var(--ink-1); margin-right: 6px; }
+  .legend .win  { color: var(--win);  font-weight: 600; }
+  .legend .loss { color: var(--loss); font-weight: 600; }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  #chart {
+    width: 100%;
+    height: calc(100vh - 240px);
+    min-height: 560px;
+  }
+
+  /* trade table — clean, dense, easy to scan */
+  table.trades {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 22px;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.trades caption {
+    text-align: left;
+    padding: 12px 14px 8px;
+    font-weight: 600;
+    color: var(--ink-1);
+    background: var(--card);
+    caption-side: top;
+  }
+  table.trades th, table.trades td {
+    padding: 7px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--grid);
+  }
+  table.trades th {
+    background: #f6f8fa;
+    color: var(--ink-2);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--grid);
+    position: sticky;
+    top: 0;
+  }
+  table.trades th:first-child, table.trades td:first-child { text-align: center; width: 38px; color: var(--ink-3); }
+  table.trades th:nth-child(2), table.trades td:nth-child(2) { text-align: left; font-family: monospace; font-size: 11.5px; }
+  table.trades th:last-child, table.trades td:last-child { text-align: left; }
+  table.trades tbody tr:last-child td { border-bottom: 0; }
+  table.trades tbody tr:hover td { background: #f6f8fa; }
+  table.trades td.dir-call { color: var(--win);  font-weight: 600; }
+  table.trades td.dir-put  { color: var(--loss); font-weight: 600; }
+  table.trades tr.win  td.pnl { color: var(--win);  font-weight: 600; }
+  table.trades tr.loss td.pnl { color: var(--loss); font-weight: 600; }
+
+  /* When embedded in an iframe inside the daily page the table is
+     redundant with the markdown table below it; hide it there. */
+  body.embedded table.trades { display: none; }
 </style>
 <script src="/qtrade-reports/assets/plotly-2.35.2.min.js"></script>
 </head>
 <body>
-<h1>2026-05-28 — QQQ 1-min K-line with trade markers</h1>
-<div class="meta">open 729.74 · close 732.86 · high 732.94 · low 726.41 · 91 bars · 3 trades</div>
-<div class="legend">
-  <span>▲ call entry</span>
-  <span>▼ put entry</span>
-  <span style="color:#26a69a;">● win</span>
-  <span style="color:#ef5350;">● loss</span>
-  <span>exit: ✕ stop_loss · ★ trailing/partial · ● trend_stop · ◆ timeout</span>
+<div class="page-head">
+  <h1>2026-05-28 <span style="color:var(--ink-3); font-weight:400;">· QQQ 1-min</span></h1>
+  <div class="meta">open 729.74 · close 732.86 · high 732.94 · low 726.41 · 91 bars · 3 trades</div>
 </div>
-<div id="chart"></div>
+<div class="legend">
+  <strong>Entry</strong>
+  <span>▲ call</span><span>▼ put</span>
+  <span class="win">● win</span><span class="loss">● loss</span>
+  <strong style="margin-left:8px;">Exit</strong>
+  <span>✕ stop_loss</span>
+  <span>★ trailing / partial</span>
+  <span>● trend_stop</span>
+  <span>◆ timeout</span>
+  <span>⬢ climax</span>
+</div>
+<div class="chart-card"><div id="chart"></div></div>
 <table class='trades'>
+<caption>Trades (3)</caption>
 <thead><tr><th>#</th><th>Symbol</th><th>Dir</th><th>Qty</th><th>Entry ET</th><th>Exit ET</th><th>Entry $</th><th>Exit $</th><th>PnL</th><th>Max%</th><th>Reason</th></tr></thead><tbody>
 <tr class='loss'><td>#1</td><td>QQQ260528C732000.US</td><td class='dir-call'>call</td><td>13</td><td>10:00:32</td><td>10:01:55</td><td>0.73</td><td>0.54</td><td class='pnl'>-247.00</td><td>0.0%</td><td>stop_loss</td></tr>
 <tr class='win'><td>#2</td><td>QQQ260528C733000.US</td><td class='dir-call'>call</td><td>10</td><td>10:13:32</td><td>10:15:13</td><td>0.95</td><td>1.52</td><td class='pnl'>+570.00</td><td>88.4%</td><td>trailing_take_profit</td></tr>
 <tr class='loss'><td>#3</td><td>QQQ260528C735000.US</td><td class='dir-call'>call</td><td>14</td><td>10:40:58</td><td>10:42:29</td><td>0.66</td><td>0.50</td><td class='pnl'>-224.00</td><td>1.5%</td><td>stop_loss</td></tr>
 </tbody></table>
 <script>
-const FIG = {"data":[{"type":"candlestick","x":["09:30","09:31","09:32","09:33","09:34","09:35","09:36","09:37","09:38","09:39","09:40","09:41","09:42","09:43","09:44","09:45","09:46","09:47","09:48","09:49","09:50","09:51","09:52","09:53","09:54","09:55","09:56","09:57","09:58","09:59","10:00","10:01","10:02","10:03","10:04","10:05","10:06","10:07","10:08","10:09","10:10","10:11","10:12","10:13","10:14","10:15","10:16","10:17","10:18","10:19","10:20","10:21","10:22","10:23","10:24","10:25","10:26","10:27","10:28","10:29","10:30","10:31","10:32","10:33","10:34","10:35","10:36","10:37","10:38","10:39","10:40","10:41","10:42","10:43","10:44","10:45","10:46","10:47","10:48","10:49","10:50","10:51","10:52","10:53","10:54","10:55","10:56","10:57","10:58","10:59","11:00"],"open":[729.74,730.64,730.25,729.97,728.73,728.68,728.75,728.58,728.27,728.22,727.98,727.74,727.61,728.1,727.44,727.29,727.26,727.12,726.98,726.99,726.71,727.32,727.56,728.23,727.64,727.25,727.71,727.98,728.12,727.66,728.12,728.64,727.92,727.94,727.62,728.22,728.04,728.57,728.66,729.12,729.47,728.57,729.14,731.7,732.54,732.21,731.36,732.09,731.62,732.26,731.78,731.39,731.23,730.6,729.94,730.53,731.19,731.49,731.38,731.59,731.93,732.21,732.04,731.76,731.56,731.0,731.38,731.66,731.75,731.59,731.39,732.17,731.78,731.76,732.17,732.41,732.39,731.7,731.61,732.04,731.77,732.06,731.84,732.31,732.52,732.43,732.5,732.78,732.46,732.61,732.61],"high":[731.04,731.12,730.78,730.05,729.02,728.78,729.04,728.6,728.69,728.38,728.05,727.76,728.07,728.24,727.53,727.79,727.28,727.28,727.22,726.99,727.69,727.64,728.3,728.36,727.89,727.78,727.98,728.31,728.17,728.2,728.81,728.65,728.09,728.0,728.31,728.4,728.59,728.99,729.17,729.47,729.55,729.16,731.77,732.57,732.85,732.53,732.18,732.11,732.29,732.4,732.05,731.52,731.23,730.63,730.61,731.23,731.5,731.64,731.68,731.95,732.34,732.33,732.12,731.95,731.62,731.56,731.8,731.86,731.75,731.66,732.22,732.27,731.79,732.18,732.46,732.67,732.55,731.9,732.08,732.06,732.14,732.11,732.33,732.68,732.58,732.56,732.78,732.82,732.64,732.94,732.94],"low":[729.72,730.22,729.99,728.67,728.57,728.08,728.43,728.23,728.08,728.0,727.59,727.38,727.48,727.45,727.04,727.24,726.86,726.79,726.78,726.65,726.41,727.04,727.52,727.62,727.12,727.14,727.31,727.92,727.65,727.58,727.77,727.74,727.71,727.47,727.55,727.8,727.95,728.49,728.57,728.83,728.5,728.54,728.9,730.57,731.82,731.4,730.87,731.58,731.38,731.56,731.34,730.91,730.38,729.91,729.92,730.45,730.98,731.3,731.33,731.53,731.84,731.85,731.7,731.39,731.0,730.92,731.15,731.49,731.25,731.33,731.33,731.8,731.39,731.73,732.03,732.36,731.26,731.46,731.61,731.65,731.77,731.82,731.79,732.27,732.39,732.24,732.45,732.34,732.34,732.61,732.61],"close":[730.59,730.22,730.02,728.7,728.68,728.77,728.63,728.31,728.23,728.05,727.73,727.61,728.07,727.48,727.3,727.25,727.08,726.95,727.0,726.66,727.28,727.6,728.24,727.65,727.27,727.75,727.98,728.13,727.72,728.12,728.57,727.87,727.92,727.66,728.18,728.05,728.57,728.69,729.11,729.46,728.54,729.11,731.6,732.57,732.26,731.46,732.17,731.63,732.23,731.72,731.35,731.3,730.63,729.91,730.52,731.13,731.5,731.33,731.59,731.93,732.25,732.03,731.74,731.52,731.0,731.42,731.68,731.74,731.61,731.36,732.16,731.8,731.67,732.12,732.45,732.39,731.74,731.61,732.0,731.81,732.07,731.85,732.28,732.55,732.39,732.49,732.78,732.43,732.62,732.86,732.86],"name":"QQQ","increasing":{"line":{"color":"#26a69a"},"fillcolor":"#26a69a"},"decreasing":{"line":{"color":"#ef5350"},"fillcolor":"#ef5350"},"hoverlabel":{"namelength":-1}},{"type":"scatter","mode":"markers+text","x":["10:00","10:13","10:40"],"y":[728.57,732.57,732.16],"marker":{"symbol":["triangle-up","triangle-up","triangle-up"],"color":["#ef5350","#26a69a","#ef5350"],"size":14,"line":{"color":"#222","width":1}},"text":["#1","#2","#3"],"textposition":"top center","textfont":{"size":10,"color":"#222"},"hovertext":["<b>#1 ENTRY</b><br>QQQ260528C732000.US<br>dir: call<br>qty: 13<br>entry ET: 10:00:32<br>option price: 0.73<br>QQQ close: 728.57","<b>#2 ENTRY</b><br>QQQ260528C733000.US<br>dir: call<br>qty: 10<br>entry ET: 10:13:32<br>option price: 0.95<br>QQQ close: 732.57","<b>#3 ENTRY</b><br>QQQ260528C735000.US<br>dir: call<br>qty: 14<br>entry ET: 10:40:58<br>option price: 0.66<br>QQQ close: 732.16"],"hovertemplate":"%{hovertext}<extra></extra>","name":"entry","showlegend":false},{"type":"scatter","mode":"markers+text","x":["10:01","10:15","10:42"],"y":[727.87,731.46,731.67],"marker":{"symbol":["x","star","x"],"color":["#ef5350","#26a69a","#ef5350"],"size":14,"line":{"color":"#222","width":1}},"text":["#1","#2","#3"],"textposition":"bottom center","textfont":{"size":10,"color":"#222"},"hovertext":["<b>#1 EXIT</b><br>QQQ260528C732000.US<br>reason: stop_loss<br>exit ET: 10:01:55<br>option price: 0.54<br>QQQ close: 727.87<br>PnL: -247.00 USD<br>max%: 0.0%","<b>#2 EXIT</b><br>QQQ260528C733000.US<br>reason: trailing_take_profit<br>exit ET: 10:15:13<br>option price: 1.52<br>QQQ close: 731.46<br>PnL: +570.00 USD<br>max%: 88.4%","<b>#3 EXIT</b><br>QQQ260528C735000.US<br>reason: stop_loss<br>exit ET: 10:42:29<br>option price: 0.50<br>QQQ close: 731.67<br>PnL: -224.00 USD<br>max%: 1.5%"],"hovertemplate":"%{hovertext}<extra></extra>","name":"exit","showlegend":false}],"layout":{"xaxis":{"type":"category","tickangle":-45,"nticks":30,"rangeslider":{"visible":false},"title":"ET time"},"yaxis":{"title":"QQQ price","fixedrange":false},"shapes":[{"type":"line","xref":"x","yref":"y","x0":"10:00","y0":728.57,"x1":"10:01","y1":727.87,"line":{"color":"rgba(239,83,80,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:13","y0":732.57,"x1":"10:15","y1":731.46,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:40","y0":732.16,"x1":"10:42","y1":731.67,"line":{"color":"rgba(239,83,80,0.35)","width":1.5,"dash":"dot"},"layer":"above"}],"dragmode":"pan","margin":{"l":50,"r":30,"t":20,"b":60},"plot_bgcolor":"#ffffff","paper_bgcolor":"#fafafa"}};
+const FIG = {"data":[{"type":"candlestick","x":["09:30","09:31","09:32","09:33","09:34","09:35","09:36","09:37","09:38","09:39","09:40","09:41","09:42","09:43","09:44","09:45","09:46","09:47","09:48","09:49","09:50","09:51","09:52","09:53","09:54","09:55","09:56","09:57","09:58","09:59","10:00","10:01","10:02","10:03","10:04","10:05","10:06","10:07","10:08","10:09","10:10","10:11","10:12","10:13","10:14","10:15","10:16","10:17","10:18","10:19","10:20","10:21","10:22","10:23","10:24","10:25","10:26","10:27","10:28","10:29","10:30","10:31","10:32","10:33","10:34","10:35","10:36","10:37","10:38","10:39","10:40","10:41","10:42","10:43","10:44","10:45","10:46","10:47","10:48","10:49","10:50","10:51","10:52","10:53","10:54","10:55","10:56","10:57","10:58","10:59","11:00"],"open":[729.74,730.64,730.25,729.97,728.73,728.68,728.75,728.58,728.27,728.22,727.98,727.74,727.61,728.1,727.44,727.29,727.26,727.12,726.98,726.99,726.71,727.32,727.56,728.23,727.64,727.25,727.71,727.98,728.12,727.66,728.12,728.64,727.92,727.94,727.62,728.22,728.04,728.57,728.66,729.12,729.47,728.57,729.14,731.7,732.54,732.21,731.36,732.09,731.62,732.26,731.78,731.39,731.23,730.6,729.94,730.53,731.19,731.49,731.38,731.59,731.93,732.21,732.04,731.76,731.56,731.0,731.38,731.66,731.75,731.59,731.39,732.17,731.78,731.76,732.17,732.41,732.39,731.7,731.61,732.04,731.77,732.06,731.84,732.31,732.52,732.43,732.5,732.78,732.46,732.61,732.61],"high":[731.04,731.12,730.78,730.05,729.02,728.78,729.04,728.6,728.69,728.38,728.05,727.76,728.07,728.24,727.53,727.79,727.28,727.28,727.22,726.99,727.69,727.64,728.3,728.36,727.89,727.78,727.98,728.31,728.17,728.2,728.81,728.65,728.09,728.0,728.31,728.4,728.59,728.99,729.17,729.47,729.55,729.16,731.77,732.57,732.85,732.53,732.18,732.11,732.29,732.4,732.05,731.52,731.23,730.63,730.61,731.23,731.5,731.64,731.68,731.95,732.34,732.33,732.12,731.95,731.62,731.56,731.8,731.86,731.75,731.66,732.22,732.27,731.79,732.18,732.46,732.67,732.55,731.9,732.08,732.06,732.14,732.11,732.33,732.68,732.58,732.56,732.78,732.82,732.64,732.94,732.94],"low":[729.72,730.22,729.99,728.67,728.57,728.08,728.43,728.23,728.08,728.0,727.59,727.38,727.48,727.45,727.04,727.24,726.86,726.79,726.78,726.65,726.41,727.04,727.52,727.62,727.12,727.14,727.31,727.92,727.65,727.58,727.77,727.74,727.71,727.47,727.55,727.8,727.95,728.49,728.57,728.83,728.5,728.54,728.9,730.57,731.82,731.4,730.87,731.58,731.38,731.56,731.34,730.91,730.38,729.91,729.92,730.45,730.98,731.3,731.33,731.53,731.84,731.85,731.7,731.39,731.0,730.92,731.15,731.49,731.25,731.33,731.33,731.8,731.39,731.73,732.03,732.36,731.26,731.46,731.61,731.65,731.77,731.82,731.79,732.27,732.39,732.24,732.45,732.34,732.34,732.61,732.61],"close":[730.59,730.22,730.02,728.7,728.68,728.77,728.63,728.31,728.23,728.05,727.73,727.61,728.07,727.48,727.3,727.25,727.08,726.95,727.0,726.66,727.28,727.6,728.24,727.65,727.27,727.75,727.98,728.13,727.72,728.12,728.57,727.87,727.92,727.66,728.18,728.05,728.57,728.69,729.11,729.46,728.54,729.11,731.6,732.57,732.26,731.46,732.17,731.63,732.23,731.72,731.35,731.3,730.63,729.91,730.52,731.13,731.5,731.33,731.59,731.93,732.25,732.03,731.74,731.52,731.0,731.42,731.68,731.74,731.61,731.36,732.16,731.8,731.67,732.12,732.45,732.39,731.74,731.61,732.0,731.81,732.07,731.85,732.28,732.55,732.39,732.49,732.78,732.43,732.62,732.86,732.86],"name":"QQQ","increasing":{"line":{"color":"#1f9d76","width":1.2},"fillcolor":"#1f9d76"},"decreasing":{"line":{"color":"#d23f3f","width":1.2},"fillcolor":"#d23f3f"},"whiskerwidth":0.3,"hoverlabel":{"namelength":-1},"showlegend":false},{"type":"scatter","mode":"markers+text","x":["10:00","10:13","10:40"],"y":[728.57,732.57,732.16],"marker":{"symbol":["triangle-up","triangle-up","triangle-up"],"color":["#d23f3f","#1f9d76","#d23f3f"],"size":16,"line":{"color":"#ffffff","width":1.5},"opacity":0.95},"text":["#1","#2","#3"],"textposition":"top center","textfont":{"size":11,"color":"#111827","family":"monospace"},"hovertext":["<b>#1 ENTRY</b><br>QQQ260528C732000.US<br>dir: call<br>qty: 13<br>entry ET: 10:00:32<br>option price: 0.73<br>QQQ close: 728.57","<b>#2 ENTRY</b><br>QQQ260528C733000.US<br>dir: call<br>qty: 10<br>entry ET: 10:13:32<br>option price: 0.95<br>QQQ close: 732.57","<b>#3 ENTRY</b><br>QQQ260528C735000.US<br>dir: call<br>qty: 14<br>entry ET: 10:40:58<br>option price: 0.66<br>QQQ close: 732.16"],"hovertemplate":"%{hovertext}<extra></extra>","name":"entry","showlegend":false},{"type":"scatter","mode":"markers+text","x":["10:01","10:15","10:42"],"y":[727.87,731.46,731.67],"marker":{"symbol":["x","star","x"],"color":["#d23f3f","#1f9d76","#d23f3f"],"size":16,"line":{"color":"#ffffff","width":1.5},"opacity":0.95},"text":["#1","#2","#3"],"textposition":"bottom center","textfont":{"size":11,"color":"#111827","family":"monospace"},"hovertext":["<b>#1 EXIT</b><br>QQQ260528C732000.US<br>reason: stop_loss<br>exit ET: 10:01:55<br>option price: 0.54<br>QQQ close: 727.87<br>PnL: -247.00 USD<br>max%: 0.0%","<b>#2 EXIT</b><br>QQQ260528C733000.US<br>reason: trailing_take_profit<br>exit ET: 10:15:13<br>option price: 1.52<br>QQQ close: 731.46<br>PnL: +570.00 USD<br>max%: 88.4%","<b>#3 EXIT</b><br>QQQ260528C735000.US<br>reason: stop_loss<br>exit ET: 10:42:29<br>option price: 0.50<br>QQQ close: 731.67<br>PnL: -224.00 USD<br>max%: 1.5%"],"hovertemplate":"%{hovertext}<extra></extra>","name":"exit","showlegend":false}],"layout":{"xaxis":{"type":"category","tickangle":0,"tickmode":"array","tickvals":["09:30","10:00","10:30","11:00"],"ticktext":["09:30","10:00","10:30","11:00"],"rangeslider":{"visible":false},"showgrid":true,"gridcolor":"#f3f4f6","zeroline":false,"showline":true,"linecolor":"#e5e7eb","tickfont":{"size":11,"color":"#6b7280"}},"yaxis":{"title":{"text":"QQQ price (USD)","font":{"size":12,"color":"#6b7280"}},"fixedrange":false,"showgrid":true,"gridcolor":"#f3f4f6","zeroline":false,"showline":true,"linecolor":"#e5e7eb","tickfont":{"size":11,"color":"#6b7280"},"tickformat":".2f"},"shapes":[{"type":"line","xref":"x","yref":"y","x0":"10:00","y0":728.57,"x1":"10:01","y1":727.87,"line":{"color":"rgba(210,63,63,0.55)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:13","y0":732.57,"x1":"10:15","y1":731.46,"line":{"color":"rgba(31,157,118,0.55)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:40","y0":732.16,"x1":"10:42","y1":731.67,"line":{"color":"rgba(210,63,63,0.55)","width":1.5,"dash":"dot"},"layer":"above"}],"dragmode":"pan","hovermode":"closest","hoverlabel":{"bgcolor":"#111827","bordercolor":"#111827","font":{"color":"#f9fafb","size":12}},"margin":{"l":60,"r":18,"t":12,"b":36},"plot_bgcolor":"#ffffff","paper_bgcolor":"#ffffff","font":{"family":"-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif"},"showlegend":false}};
+// When loaded inside an iframe (daily page embed) tag the body so we can
+// hide the redundant trade table below.
+try { if (window.parent !== window.self) document.body.classList.add('embedded'); } catch (e) {}
 Plotly.newPlot('chart', FIG.data, FIG.layout, {
     responsive: true,
     displaylogo: false,
     modeBarButtonsToRemove: ['lasso2d', 'select2d']
 });
+window.addEventListener('resize', () => Plotly.Plots.resize('chart'));
 </script>
 </body>
 </html>
