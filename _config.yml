@@ -1,0 +1,39 @@
+title: Personal Time-series Notes
+description: Daily data observations and visualizations.
+baseurl: "/qtrade-reports"
+
+remote_theme: just-the-docs/just-the-docs
+
+# just-the-docs settings
+search_enabled: true
+heading_anchors: true
+color_scheme: light
+
+# Plugins required by GitHub Pages
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Exclude noise from build
+exclude:
+  - README.md
+  - .gitignore
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+
+# Render .html files (charts) as-is, not through Jekyll
+include:
+  - "daily-trades/*.html"
+keep_files:
+  - "assets"
+
+# Default front matter so we don't have to add it to every markdown
+defaults:
+  - scope:
+      path: "daily-trades"
+      type: pages
+    values:
+      layout: default
+      parent: Daily Trades
