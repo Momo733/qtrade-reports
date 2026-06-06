@@ -10,6 +10,7 @@ Daily data observations and visualizations. Auto-generated; do not edit by hand.
 
 ## 2026-06
 
+- [2026-06-05](daily-trades/2026-06-05.html) (+501.00 USD)
 - [2026-06-04](daily-trades/2026-06-04.html) (+737.00 USD)
 - [2026-06-03](daily-trades/2026-06-03.html)
 - [2026-06-02](daily-trades/2026-06-02.html)
