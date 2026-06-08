@@ -16,113 +16,12 @@
 
     <div class="flex-1"></div>
 
-    {%- comment -%}
-      Calendar popover. The previous <select> based jumper rendered relative
-      URLs that 404'd from the home page (and was a poor UX besides). The
-      popover always emits absolute URLs via `relative_url`, and lets the
-      reader scan a month at a glance with PnL color coding straight from
-      `_data/days.yml`.
-    {%- endcomment -%}
-    {%- assign hdr_days_asc = site.data.days | sort: 'date' -%}
-    {%- if hdr_days_asc.size > 0 -%}
-      {%- comment -%} Build a list of unique YYYY-MM strings, oldest -> newest. {%- endcomment -%}
-      {%- assign months_buf = '' -%}
-      {%- for d in hdr_days_asc -%}
-        {%- assign ym = d.date | slice: 0, 7 -%}
-        {%- unless months_buf contains ym -%}
-          {%- assign months_buf = months_buf | append: ym | append: ',' -%}
-        {%- endunless -%}
-      {%- endfor -%}
-      {%- assign months = months_buf | split: ',' | where_exp: 'm', 'm != ""' -%}
-      {%- assign latest_ym = months | last -%}
-
-      {%- assign current_date = page.date | default: '' -%}
-      {%- if current_date == '' -%}
-        {%- assign current_label = 'Jump to date' -%}
-      {%- else -%}
-        {%- assign current_label = current_date -%}
-      {%- endif -%}
-
-      <div id="qt-hdr-cal" class="relative" data-page-date="{{ current_date }}" data-latest-ym="{{ latest_ym }}">
-        <button type="button" id="qt-hdr-cal-btn"
-                aria-label="Open date picker" aria-expanded="false" aria-haspopup="dialog"
-                class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-sm border border-line dark:border-night-line bg-surface dark:bg-night-surface text-ink dark:text-night-ink-hi hover:border-accent dark:hover:border-accent focus:outline-none focus:border-accent text-xs font-mono">
-          <svg aria-hidden="true" class="w-3.5 h-3.5 text-ink-mute dark:text-night-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span id="qt-hdr-cal-label">{{ current_label }}</span>
-          <svg aria-hidden="true" class="w-3 h-3 text-ink-mute dark:text-night-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-
-        <div id="qt-hdr-cal-pop" role="dialog" aria-label="Date picker"
-             class="hidden absolute right-0 top-full mt-1 z-40 w-[19rem] rounded-md border border-line dark:border-night-line bg-surface dark:bg-night-surface shadow-tv dark:shadow-tv-dk p-2">
-
-          <div class="flex items-center justify-between px-1 pb-2 border-b border-line dark:border-night-line">
-            <button type="button" id="qt-cal-prev" aria-label="Previous month"
-                    class="inline-flex items-center justify-center w-7 h-7 rounded-sm text-ink-mute dark:text-night-mute hover:text-ink dark:hover:text-night-ink-hi hover:bg-line/40 dark:hover:bg-night-line/40 disabled:opacity-30 disabled:pointer-events-none focus:outline-none focus:text-accent">
-              <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-            <span id="qt-cal-month-label" class="text-xs font-mono font-semibold uppercase tracking-widest text-ink dark:text-night-ink-hi">&nbsp;</span>
-            <button type="button" id="qt-cal-next" aria-label="Next month"
-                    class="inline-flex items-center justify-center w-7 h-7 rounded-sm text-ink-mute dark:text-night-mute hover:text-ink dark:hover:text-night-ink-hi hover:bg-line/40 dark:hover:bg-night-line/40 disabled:opacity-30 disabled:pointer-events-none focus:outline-none focus:text-accent">
-              <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
-            </button>
-          </div>
-
-          <div class="grid grid-cols-7 gap-0.5 px-1 pt-2 pb-1 text-[9px] uppercase tracking-widest text-ink-mute dark:text-night-mute text-center">
-            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-          </div>
-
-          <div id="qt-cal-months" class="px-1 pb-1">
-            {%- for ym in months -%}
-              {%- assign first_iso = ym | append: '-01' -%}
-              {%- assign first_anchor = first_iso | append: 'T00:00:00Z' -%}
-              {%- assign first_ts = first_anchor | date: '%s' | plus: 0 -%}
-              {%- assign first_wd = first_anchor | date: '%u' | plus: 0 -%}
-              {%- assign offset = first_wd | minus: 1 -%}
-              <div class="qt-cal-month grid grid-cols-7 gap-0.5" data-ym="{{ ym }}" hidden>
-                {%- for i in (1..6) -%}
-                  {%- if i <= offset -%}<div class="h-7"></div>{%- endif -%}
-                {%- endfor -%}
-                {%- for day in (1..31) -%}
-                  {%- assign secs = day | minus: 1 | times: 86400 -%}
-                  {%- assign cell_ts = first_ts | plus: secs -%}
-                  {%- assign cell_ym = cell_ts | date: '%Y-%m' -%}
-                  {%- if cell_ym == ym -%}
-                    {%- assign cell_date = cell_ts | date: '%Y-%m-%d' -%}
-                    {%- assign cell_wd = cell_ts | date: '%u' | plus: 0 -%}
-                    {%- assign matched = hdr_days_asc | where: 'date', cell_date | first -%}
-                    {%- if matched -%}
-                      {%- if matched.pnl > 0 -%}
-                        {%- assign cell_klass = 'bg-up/15 text-up dark:bg-up/20 hover:bg-up/30' -%}
-                      {%- elsif matched.pnl < 0 -%}
-                        {%- assign cell_klass = 'bg-down/15 text-down dark:bg-down/20 hover:bg-down/30' -%}
-                      {%- else -%}
-                        {%- assign cell_klass = 'bg-line/60 text-ink-soft dark:bg-night-line/70 dark:text-night-soft hover:bg-line dark:hover:bg-night-line' -%}
-                      {%- endif -%}
-                      {%- assign is_current = false -%}
-                      {%- if cell_date == current_date -%}{%- assign is_current = true -%}{%- endif -%}
-                      <a href="{{ '/daily-trades/' | append: cell_date | append: '.html' | relative_url }}"
-                         data-date="{{ cell_date }}"
-                         title="{{ cell_date }} · {% if matched.pnl > 0 %}+{% endif %}{{ matched.pnl }} USD · {{ matched.trades }} trades"
-                         class="qt-cal-day h-7 flex items-center justify-center rounded-sm text-[11px] font-mono leading-none cursor-pointer transition-colors {{ cell_klass }}{% if is_current %} ring-2 ring-accent ring-offset-1 ring-offset-surface dark:ring-offset-night-surface font-semibold{% endif %}">{{ day }}</a>
-                    {%- else -%}
-                      <div class="h-7 flex items-center justify-center rounded-sm text-[11px] font-mono leading-none text-ink-mute/40 dark:text-night-mute/40{% if cell_wd > 5 %} opacity-50{% endif %}">{{ day }}</div>
-                    {%- endif -%}
-                  {%- endif -%}
-                {%- endfor -%}
-              </div>
-            {%- endfor -%}
-          </div>
-
-          <div class="border-t border-line dark:border-night-line mt-1 pt-1.5 px-1 text-[10px] text-ink-mute dark:text-night-mute font-mono flex items-center justify-between">
-            <span class="flex items-center gap-1">
-              <span class="inline-block w-2 h-2 rounded-sm bg-up/40"></span><span>win</span>
-              <span class="inline-block w-2 h-2 rounded-sm bg-down/40 ml-1"></span><span>loss</span>
-            </span>
-            <span class="hidden sm:inline">Esc to close</span>
-          </div>
-        </div>
-      </div>
-    {%- endif -%}
+    {% include date_picker.html
+        id="qt-hdr-cal"
+        current_date=page.date
+        label="Jump to date"
+        size="sm"
+        align="right" %}
 
     <a href="https://github.com/momo733/qtrade-reports" target="_blank" rel="noopener"
        class="hidden sm:inline-flex items-center justify-center w-8 h-8 rounded-sm text-ink-mute dark:text-night-mute hover:text-ink dark:hover:text-night-ink-hi hover:bg-line/60 dark:hover:bg-night-line/80"

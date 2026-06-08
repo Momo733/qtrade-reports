@@ -99,19 +99,11 @@ layout: default
     </div>
     <div class="flex items-center gap-2">
       <span class="text-xxs text-ink-mute dark:text-night-mute hidden md:inline">Click a column header to sort</span>
-      <div class="relative">
-        <label for="qt-home-date-jump" class="sr-only">Jump to date</label>
-        <select id="qt-home-date-jump"
-                onchange="if(this.value){location.href=this.value;}"
-                class="appearance-none cursor-pointer pl-7 pr-6 h-7 rounded-sm border border-line dark:border-night-line bg-surface dark:bg-night-surface text-ink dark:text-night-ink-hi hover:border-accent dark:hover:border-accent focus:outline-none focus:border-accent text-xs font-mono">
-          <option value="">Jump to date…</option>
-          {% for entry in days %}
-            <option value="daily-trades/{{ entry.date }}.html">{{ entry.date }} {% if entry.pnl > 0 %}(+{{ entry.pnl }}){% elsif entry.pnl < 0 %}({{ entry.pnl }}){% else %}(0){% endif %}</option>
-          {% endfor %}
-        </select>
-        <svg aria-hidden="true" class="absolute left-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-mute dark:text-night-mute pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <svg aria-hidden="true" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-ink-mute dark:text-night-mute pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
+      {% include date_picker.html
+          id="qt-home-cal"
+          label="Jump to date"
+          size="sm"
+          align="right" %}
     </div>
   </div>
   <div class="overflow-x-auto">

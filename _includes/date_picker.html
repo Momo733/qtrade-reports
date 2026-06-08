@@ -1,0 +1,136 @@
+{%- comment -%}
+  Reusable calendar popover. Uses absolute URLs via `relative_url`, so it
+  works from any page (home, daily, future routes) without 404 surprises.
+
+  Parameters (all optional unless noted):
+    id            REQUIRED — unique DOM id prefix, e.g. "qt-hdr-cal".
+                  Final ids: <id>-btn, <id>-pop, plus internal class
+                  hooks (`.qt-cal-prev` etc.) scoped to the popover.
+    current_date  YYYY-MM-DD of the page's "selected" day. Empty / nil
+                  on home and other non-daily pages.
+    label         Button text when `current_date` is empty (default
+                  "Jump to date").
+    size          "sm" (h-7, default) or "md" (h-9, for the daily nav
+                  strip where prev / next buttons are taller).
+    align         "right" (default) or "left" — which side of the
+                  trigger the popover anchors to.
+
+  The popover server-renders one `<div class="qt-cal-month" data-ym="">`
+  per YYYY-MM with weekend / weekday offsets pre-computed; JS only
+  toggles visibility + handles open/close. See assets/js/datepicker.js.
+{%- endcomment -%}
+
+{%- assign cur = include.current_date | default: '' -%}
+{%- if cur == '' -%}
+  {%- assign btn_label = include.label | default: 'Jump to date' -%}
+{%- else -%}
+  {%- assign btn_label = cur -%}
+{%- endif -%}
+
+{%- assign size = include.size | default: 'sm' -%}
+{%- if size == 'md' -%}
+  {%- assign btn_classes = 'h-9 px-3 text-xs font-mono font-medium' -%}
+{%- else -%}
+  {%- assign btn_classes = 'h-7 px-2.5 text-xs font-mono' -%}
+{%- endif -%}
+
+{%- assign align = include.align | default: 'right' -%}
+{%- if align == 'left' -%}
+  {%- assign pop_align = 'left-0' -%}
+{%- else -%}
+  {%- assign pop_align = 'right-0' -%}
+{%- endif -%}
+
+{%- assign cal_days_asc = site.data.days | sort: 'date' -%}
+{%- if cal_days_asc.size > 0 -%}
+  {%- assign months_buf = '' -%}
+  {%- for d in cal_days_asc -%}
+    {%- assign ym = d.date | slice: 0, 7 -%}
+    {%- unless months_buf contains ym -%}
+      {%- assign months_buf = months_buf | append: ym | append: ',' -%}
+    {%- endunless -%}
+  {%- endfor -%}
+  {%- assign months = months_buf | split: ',' | where_exp: 'm', 'm != ""' -%}
+
+  <div id="{{ include.id }}" class="relative" data-qt-cal-root data-page-date="{{ cur }}">
+    <button type="button" id="{{ include.id }}-btn"
+            aria-label="Open date picker" aria-expanded="false" aria-haspopup="dialog"
+            data-qt-cal-btn
+            class="inline-flex items-center gap-1.5 {{ btn_classes }} rounded-sm border border-line dark:border-night-line bg-surface dark:bg-night-surface text-ink dark:text-night-ink-hi hover:border-accent dark:hover:border-accent focus:outline-none focus:border-accent">
+      <svg aria-hidden="true" class="w-3.5 h-3.5 text-ink-mute dark:text-night-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span data-qt-cal-label>{{ btn_label }}</span>
+      <svg aria-hidden="true" class="w-3 h-3 text-ink-mute dark:text-night-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
+    <div id="{{ include.id }}-pop" role="dialog" aria-label="Date picker"
+         data-qt-cal-pop
+         class="hidden absolute {{ pop_align }} top-full mt-1 z-40 w-[19rem] rounded-md border border-line dark:border-night-line bg-surface dark:bg-night-surface shadow-tv dark:shadow-tv-dk p-2">
+
+      <div class="flex items-center justify-between px-1 pb-2 border-b border-line dark:border-night-line">
+        <button type="button" data-qt-cal-prev aria-label="Previous month"
+                class="inline-flex items-center justify-center w-7 h-7 rounded-sm text-ink-mute dark:text-night-mute hover:text-ink dark:hover:text-night-ink-hi hover:bg-line/40 dark:hover:bg-night-line/40 disabled:opacity-30 disabled:pointer-events-none focus:outline-none focus:text-accent">
+          <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span data-qt-cal-month-label class="text-xs font-mono font-semibold uppercase tracking-widest text-ink dark:text-night-ink-hi">&nbsp;</span>
+        <button type="button" data-qt-cal-next aria-label="Next month"
+                class="inline-flex items-center justify-center w-7 h-7 rounded-sm text-ink-mute dark:text-night-mute hover:text-ink dark:hover:text-night-ink-hi hover:bg-line/40 dark:hover:bg-night-line/40 disabled:opacity-30 disabled:pointer-events-none focus:outline-none focus:text-accent">
+          <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-7 gap-0.5 px-1 pt-2 pb-1 text-[9px] uppercase tracking-widest text-ink-mute dark:text-night-mute text-center">
+        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+      </div>
+
+      <div class="px-1 pb-1" data-qt-cal-months>
+        {%- for ym in months -%}
+          {%- assign first_iso = ym | append: '-01' -%}
+          {%- assign first_anchor = first_iso | append: 'T00:00:00Z' -%}
+          {%- assign first_ts = first_anchor | date: '%s' | plus: 0 -%}
+          {%- assign first_wd = first_anchor | date: '%u' | plus: 0 -%}
+          {%- assign offset = first_wd | minus: 1 -%}
+          <div class="qt-cal-month grid grid-cols-7 gap-0.5" data-ym="{{ ym }}" hidden>
+            {%- for i in (1..6) -%}
+              {%- if i <= offset -%}<div class="h-7"></div>{%- endif -%}
+            {%- endfor -%}
+            {%- for day in (1..31) -%}
+              {%- assign secs = day | minus: 1 | times: 86400 -%}
+              {%- assign cell_ts = first_ts | plus: secs -%}
+              {%- assign cell_ym = cell_ts | date: '%Y-%m' -%}
+              {%- if cell_ym == ym -%}
+                {%- assign cell_date = cell_ts | date: '%Y-%m-%d' -%}
+                {%- assign cell_wd = cell_ts | date: '%u' | plus: 0 -%}
+                {%- assign matched = cal_days_asc | where: 'date', cell_date | first -%}
+                {%- if matched -%}
+                  {%- if matched.pnl > 0 -%}
+                    {%- assign cell_klass = 'bg-up/15 text-up dark:bg-up/20 hover:bg-up/30' -%}
+                  {%- elsif matched.pnl < 0 -%}
+                    {%- assign cell_klass = 'bg-down/15 text-down dark:bg-down/20 hover:bg-down/30' -%}
+                  {%- else -%}
+                    {%- assign cell_klass = 'bg-line/60 text-ink-soft dark:bg-night-line/70 dark:text-night-soft hover:bg-line dark:hover:bg-night-line' -%}
+                  {%- endif -%}
+                  {%- assign is_current = false -%}
+                  {%- if cell_date == cur -%}{%- assign is_current = true -%}{%- endif -%}
+                  <a href="{{ '/daily-trades/' | append: cell_date | append: '.html' | relative_url }}"
+                     data-date="{{ cell_date }}"
+                     title="{{ cell_date }} · {% if matched.pnl > 0 %}+{% endif %}{{ matched.pnl }} USD · {{ matched.trades }} trades"
+                     class="qt-cal-day h-7 flex items-center justify-center rounded-sm text-[11px] font-mono leading-none cursor-pointer transition-colors {{ cell_klass }}{% if is_current %} ring-2 ring-accent ring-offset-1 ring-offset-surface dark:ring-offset-night-surface font-semibold{% endif %}">{{ day }}</a>
+                {%- else -%}
+                  <div class="h-7 flex items-center justify-center rounded-sm text-[11px] font-mono leading-none text-ink-mute/40 dark:text-night-mute/40{% if cell_wd > 5 %} opacity-50{% endif %}">{{ day }}</div>
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endfor -%}
+      </div>
+
+      <div class="border-t border-line dark:border-night-line mt-1 pt-1.5 px-1 text-[10px] text-ink-mute dark:text-night-mute font-mono flex items-center justify-between">
+        <span class="flex items-center gap-1">
+          <span class="inline-block w-2 h-2 rounded-sm bg-up/40"></span><span>win</span>
+          <span class="inline-block w-2 h-2 rounded-sm bg-down/40 ml-1"></span><span>loss</span>
+        </span>
+        <span class="hidden sm:inline">Esc to close</span>
+      </div>
+    </div>
+  </div>
+{%- endif -%}
