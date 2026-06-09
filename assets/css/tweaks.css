@@ -122,3 +122,93 @@ html.dark .text-down { color: #ef5350; }
   50%     { transform: scale(1.2); opacity: 1; }
 }
 .qt-pulse { animation: qt-pulse 2.4s ease-in-out infinite; }
+
+/* ---------------- Trade table: zebra stripes & sticky header --------- */
+
+/* Zebra-stripe every other trade row so long logs are easier to scan.
+   Using :nth-child keeps the pattern correct after sort.js reorders rows. */
+.qt-md table.qt-trade-table tbody tr:nth-child(even) td { background: rgba(120,123,134,0.04); }
+html.dark .qt-md table.qt-trade-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.018); }
+/* Hover wins over the stripe (same specificity, declared later). */
+.qt-md table.qt-trade-table tbody tr:hover td { background: rgba(41,98,255,0.06); }
+html.dark .qt-md table.qt-trade-table tbody tr:hover td { background: rgba(41,98,255,0.10); }
+
+/* Sticky <thead> when the surrounding card has its own scroll. The Trade
+   Log card itself doesn't scroll today; this kicks in only when the user
+   constrains the qt-md viewport (e.g. zoom-in) so it's a low-risk add. */
+.qt-md table.qt-trade-table thead th {
+  position: sticky; top: 0; z-index: 1;
+}
+
+/* ---------------- Per-row copy button --------------------------------- */
+
+.qt-md table.qt-trade-table th.qt-copy-th {
+  width: 28px;
+  padding: 4px 4px;
+  cursor: default;
+}
+.qt-md table.qt-trade-table th.qt-copy-th::after { content: ''; }
+.qt-md table.qt-trade-table td.qt-copy-td {
+  width: 28px;
+  padding: 2px 4px;
+  text-align: center;
+}
+.qt-copy-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px;
+  cursor: pointer;
+  color: #787b86;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.45;
+  transition: opacity .12s ease, color .12s ease,
+              background-color .12s ease, border-color .12s ease;
+}
+.qt-md table.qt-trade-table tbody tr:hover .qt-copy-btn { opacity: 1; }
+.qt-copy-btn:hover {
+  color: #2962ff;
+  background: rgba(41,98,255,0.10);
+  border-color: rgba(41,98,255,0.30);
+  opacity: 1;
+}
+.qt-copy-btn:focus-visible {
+  outline: none;
+  color: #2962ff;
+  background: rgba(41,98,255,0.10);
+  border-color: rgba(41,98,255,0.45);
+  opacity: 1;
+}
+html.dark .qt-copy-btn { color: #9598a1; }
+html.dark .qt-copy-btn:hover,
+html.dark .qt-copy-btn:focus-visible {
+  color: #ffffff;
+  background: rgba(41,98,255,0.18);
+  border-color: rgba(41,98,255,0.45);
+}
+
+.qt-copy-icon { width: 14px; height: 14px; }
+.qt-copy-icon-ok { display: none; }
+.qt-copy-btn.qt-copy-ok .qt-copy-icon-copy { display: none; }
+.qt-copy-btn.qt-copy-ok .qt-copy-icon-ok   { display: inline-block; }
+.qt-copy-btn.qt-copy-ok {
+  color: #089981 !important;
+  background: rgba(8,153,129,0.12) !important;
+  border-color: rgba(8,153,129,0.40) !important;
+  opacity: 1 !important;
+}
+html.dark .qt-copy-btn.qt-copy-ok {
+  color: #26a69a !important;
+  background: rgba(38,166,154,0.18) !important;
+  border-color: rgba(38,166,154,0.50) !important;
+}
+.qt-copy-btn.qt-copy-fail {
+  color: #ef5350 !important;
+  background: rgba(239,83,80,0.12) !important;
+  border-color: rgba(239,83,80,0.40) !important;
+  opacity: 1 !important;
+}

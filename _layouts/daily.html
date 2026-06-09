@@ -138,7 +138,12 @@ layout: default
     </div>
     <div class="flex items-center gap-3 text-xxs text-ink-mute dark:text-night-mute">
       <span class="hidden sm:inline">▲ entry · ✕ stop · ★ trail · ● trend · ◆ timeout · ⬢ climax</span>
-      <a href="{{ page.chart }}" target="_blank" rel="noopener" class="px-2 py-0.5 rounded-sm border border-line dark:border-night-line hover:border-accent dark:hover:border-accent hover:text-accent">Open</a>
+      <a href="{{ page.chart }}" target="_blank" rel="noopener"
+         class="inline-flex items-center gap-1 px-2 h-6 rounded-sm border border-line dark:border-night-line hover:border-accent dark:hover:border-accent hover:text-accent transition-colors"
+         title="在新标签页打开完整图表">
+        <span>Open</span>
+        <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><polyline points="8 7 17 7 17 16"/></svg>
+      </a>
     </div>
   </div>
   <iframe id="daily-chart"
@@ -164,9 +169,15 @@ layout: default
 
 <!-- Source markdown — trade table + verbose sections fold into <details>. -->
 <section class="rounded-md bg-surface dark:bg-night-surface border border-line dark:border-night-line shadow-tv dark:shadow-tv-dk px-4 py-4 sm:px-5 sm:py-5">
-  <div class="text-xxs uppercase tracking-widest font-semibold text-ink-soft dark:text-night-soft mb-3 flex items-center gap-2">
-    <span class="inline-block w-1 h-3 bg-accent rounded-sm"></span>
-    Trade Log
+  <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+    <div class="text-xxs uppercase tracking-widest font-semibold text-ink-soft dark:text-night-soft flex items-center gap-2">
+      <span class="inline-block w-1 h-3 bg-accent rounded-sm"></span>
+      Trade Log
+    </div>
+    <div class="text-xxs uppercase tracking-widest text-ink-mute dark:text-night-mute flex items-center gap-1.5">
+      <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <span>Hover row · copy</span>
+    </div>
   </div>
   <section class="prose prose-sm sm:prose dark:prose-invert qt-md">
     {{ content }}
@@ -219,6 +230,10 @@ layout: default
         th.setAttribute('data-sortable','1');
         th.classList.add('cursor-pointer','select-none','hover:text-accent');
       });
+      addCopyColumn(t);
+      // Zebra stripes live in CSS via :nth-child(even) so they stay correct
+      // after the user clicks a sortable column header (sort.js reorders rows
+      // but does not re-tag them).
     }
   });
   Array.prototype.forEach.call(root.querySelectorAll('td'), function(td){
@@ -231,5 +246,107 @@ layout: default
     if (/^call$/i.test(s)) td.classList.add('text-up','font-semibold');
     if (/^put$/i.test(s))  td.classList.add('text-down','font-semibold');
   });
+
+  // --- Per-row copy button ----------------------------------------------
+  // Appends a "copy" column to the trade table; clicking serializes the row
+  // as "<header>: <value>" lines (with the first '#' column rendered as
+  // "序号 <n>") and writes the payload to the clipboard, with a brief
+  // checkmark confirmation on the button.
+  function addCopyColumn(table){
+    var headerLabels = labelsFromHeader(table);
+    if (!headerLabels.length) return;
+
+    var theadRow = table.querySelector('thead tr');
+    if (theadRow && !theadRow.querySelector('th.qt-copy-th')) {
+      var th = document.createElement('th');
+      th.className = 'qt-copy-th';
+      th.setAttribute('aria-label', '复制本行');
+      th.title = '复制本行';
+      th.textContent = '';
+      theadRow.appendChild(th);
+    }
+
+    Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function(tr){
+      if (tr.querySelector('td.qt-copy-td')) return;
+      var td = document.createElement('td');
+      td.className = 'qt-copy-td';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'qt-copy-btn';
+      btn.setAttribute('aria-label', '复制本行');
+      btn.title = '复制本行';
+      btn.innerHTML = copyIconSvg();
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        var payload = serializeRow(headerLabels, tr);
+        copyToClipboard(payload).then(function(ok){
+          flashButton(btn, ok);
+        });
+      });
+      td.appendChild(btn);
+      tr.appendChild(td);
+    });
+  }
+
+  function labelsFromHeader(table){
+    var ths = table.querySelectorAll('thead th');
+    var out = [];
+    Array.prototype.forEach.call(ths, function(th){
+      var t = (th.textContent || '').trim();
+      if (t === '' || t === '#') t = '序号';
+      out.push(t);
+    });
+    return out;
+  }
+
+  function serializeRow(labels, tr){
+    var cells = tr.children;
+    var lines = [];
+    for (var i = 0; i < cells.length && i < labels.length; i++) {
+      var cell = cells[i];
+      if (cell.classList && cell.classList.contains('qt-copy-td')) continue;
+      var v = (cell.textContent || '').trim();
+      if (v === '' || v === '-') continue;
+      lines.push(labels[i] + ': ' + v);
+    }
+    return lines.join('\n');
+  }
+
+  function copyIconSvg(){
+    return '<svg class="qt-copy-icon qt-copy-icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' +
+           '<svg class="qt-copy-icon qt-copy-icon-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 12 10 18 20 6"></polyline></svg>';
+  }
+
+  function copyToClipboard(text){
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function(){ return true; }, function(){ return fallbackCopy(text); });
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+
+  function fallbackCopy(text){
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) { return false; }
+  }
+
+  function flashButton(btn, ok){
+    btn.classList.toggle('qt-copy-ok', !!ok);
+    btn.classList.toggle('qt-copy-fail', !ok);
+    setTimeout(function(){
+      btn.classList.remove('qt-copy-ok');
+      btn.classList.remove('qt-copy-fail');
+    }, 1400);
+  }
 })();
 </script>
