@@ -32,6 +32,50 @@ docs/daily-trades/<date>-chart.html  ─┤  →  daily-trades/<date>.md
 
 ---
 
+## 1.5 定时任务（cron）与时区坑
+
+整条流水线由 `ubuntu` 用户的 crontab 驱动（`crontab -l` 查看），顺序为：
+
+```
+daily_trade_report.py → regime_shadow.py → climax_tp_shadow.py
+→ sweep_tier_params.py → daily_trade_chart.py → publish_to_reports.py
+（20 分钟后）check_publish_drift.py
+```
+
+各脚本日志在 `/home/ubuntu/QTrade/bin/logs/`（`daily_report.log`、
+`daily_trade_chart.log`、`publish_to_reports.log`、`publish_drift.log` 等）。
+
+**⚠️ 时区坑（2026-06-10 踩过）**：Ubuntu 的 cron **不支持**用 crontab 里的
+`TZ=America/New_York` 来调度——该变量只会注入到任务进程的环境里，
+调度永远按系统时区（Asia/Shanghai）执行。曾经的 `5 17 * * 1-5` 实际在
+**北京时间 17:05**（= 美东凌晨）触发，导致日报永远滞后一天、当晚的报告缺失。
+
+现行约定：**调度时间一律按北京时间写**，并保留 `TZ=America/New_York`
+仅供脚本运行时按美东算日期。
+
+| 任务 | cron 表达式 | 含义 |
+|---|---|---|
+| trader.log 轮转 | `25 6 * * *` | 北京 06:25 = 美东 17:25 EST / 18:25 EDT |
+| 日报流水线 | `30 6 * * 2-6` | 北京周二~周六 06:30 = 美东周一~周五收盘后 |
+| publish drift 检查 | `50 6 * * 2-6` | 流水线后 20 分钟 |
+
+如果改动 crontab，先 `crontab -l > /tmp/crontab.bak` 备份。
+
+**报告缺失时的排查顺序**：
+
+```bash
+# 1) 昨晚的原始数据在不在（有就一定能补出报告，0 笔交易也会出）
+ls -lh /home/ubuntu/QTrade/bin/records/YYYY-MM-DD.json
+
+# 2) cron 是否真的触发了、什么时间触发的
+grep CRON /var/log/syslog | grep ubuntu | grep -v stargate | tail
+
+# 3) 脚本自身报错
+tail /home/ubuntu/QTrade/bin/logs/daily_report.log
+```
+
+---
+
 ## 2. 前置检查
 
 在动手之前先核实：
@@ -51,11 +95,19 @@ git log -1 --oneline
 
 ```bash
 cd /home/ubuntu/QTrade
-python3 scripts/daily_trade_report.py --date YYYY-MM-DD
-# 产物：
-#   docs/daily-trades/YYYY-MM-DD.md
-#   docs/daily-trades/YYYY-MM-DD-chart.html
+export TZ=America/New_York            # 与 cron 环境保持一致
+python3 scripts/daily_trade_report.py --date YYYY-MM-DD   # 不传 --date 取 records 最新一天
+# 产物：docs/daily-trades/YYYY-MM-DD.md
+python3 scripts/daily_trade_chart.py                       # K 线图是独立脚本
+# 产物：docs/daily-trades/YYYY-MM-DD-chart.html
 ```
+
+> 完整补跑（含 shadow 观察 / sweep / 发布）按 §1.5 的流水线顺序逐个执行即可，
+> 2026-06-09 那次补跑就是这么做的。
+
+> **无交易日也会出报告和图**：只要 `bin/records/YYYY-MM-DD.json` 存在
+> （trader 跑了、信号全被过滤也算），报告就是 0 trades + 完整 K 线 bars，
+> 图表照常生成。周末/休市日没有 records 文件，自然跳过。
 
 ---
 
@@ -76,6 +128,10 @@ cp "$SRC/$DATE-chart.html"  "$DST/$DATE-chart.html"
 
 打开 `$DST/$DATE.md`，**保留它的 body**（交易表 + K 线表 + 汇总 + 运行配置），
 但要把开头的 front matter 替换成下面的 schema。所需字段全部在 MD body 里能找到。
+
+> 改成 `layout: daily` 之后，publisher 后续运行会把这个文件识别为
+> user-managed 并跳过（日志显示 `skipped (user-managed (layout: daily))`），
+> 不会再覆盖你的手工修改。
 
 ### 4.1 必填字段对照表
 
@@ -123,7 +179,10 @@ has_chart: true
 
 > **无交易日**：`pnl: 0`、`trades: 0`、wins/losses/breakeven 都填 0、`win_rate: 0`、
 > biggest_win / biggest_loss / max_drawdown_usd 都填 0，
-> 省略 `first_entry_et` 和 `last_exit_et`，`has_chart` 通常也是 `false`。
+> 省略 `first_entry_et` 和 `last_exit_et`。
+> `has_chart` 看 `<date>-chart.html` 是否真的存在——trader 跑了但 0 笔成交的日子
+> （如 2026-06-09，信号全被过滤）K 线图照常生成，应填 `true` 并保留 `chart:` 行；
+> 周末/休市日才是 `false`。
 
 ### 4.3 同时清理 body 里的遗留物
 
@@ -175,8 +234,17 @@ git push origin main
 
 GitHub Pages 一般 30s ~ 90s 内完成 rebuild。
 
-> **网络偶发**：从开发机推 `https://github.com/...` 偶尔 hang（`api.github.com`
-> 是好的，`github.com` HTTPS 抽风）。重试 2-3 次基本能通。
+> **网络（2026-06-10 已根治）**：直连 `github.com` 不稳定（GnuTLS 中断 / 超时，
+> publish 日志里大量 `git push FAILED ... GnuTLS recv error (-110)`）。
+> 已配置 git 仅对 github.com 走本机 clash 代理：
+>
+> ```bash
+> git config --global http.https://github.com.proxy socks5h://127.0.0.1:7890
+> ```
+>
+> 注意必须用 `socks5h://`——`http://127.0.0.1:7890` 形式会让 git 的 GnuTLS
+> 握手直接失败（`gnutls_handshake() failed`）。如果 push 再次失败，先确认
+> clash 还活着：`ss -tlnp | grep 7890`。
 
 ---
 
@@ -185,6 +253,8 @@ GitHub Pages 一般 30s ~ 90s 内完成 rebuild。
 ```bash
 DATE=YYYY-MM-DD
 BASE=https://momo733.github.io/qtrade-reports
+# 本机直连 github.io 也不稳定，给 curl 挂同一个代理：
+alias curl='curl -x http://127.0.0.1:7890'
 
 # 1) 详情页 200 + table 数 ≥ 11
 #    （2 张交易/K 线表 + 9 张运行配置子表；无交易日没有交易表，会少 1 张）
@@ -215,6 +285,9 @@ curl -fsI "$BASE/daily-trades/$DATE-chart.html" | head -1
 | **`_data/days.yml` 字段漂移** | 首页 screener 和详情页 PnL 不一致 | 步骤 C 的 entry 必须和 步骤 B 的 front matter 完全一致 |
 | **chart 缺失但 `has_chart: true`** | 详情页 iframe 404 | 文件不在就填 `false`，并把 `chart:` 行删掉 |
 | **front matter 里日期不加引号** | YAML 解析成 date 对象，`{{ page.date }}` 变成 `2026-06-05 00:00:00 UTC` | `date: "YYYY-MM-DD"` 一定加引号 |
+| **cron 用 `TZ=` 调度**（2026-06-10） | 任务在北京 17:05（美东凌晨）触发，日报永远滞后/缺失 | Ubuntu cron 不认 `TZ` 调度，表达式一律按北京时间写（见 §1.5） |
+| **publisher 发完就以为完事**（2026-06-09） | 这天在首页 #all-days / heatmap 完全不可见，详情页没有 K 线按钮 | publisher 只做最小拷贝；步骤 B（`layout: daily` 富 front matter）和步骤 C（`days.yml` entry）必须手工补，缺一不可 |
+| **git 直连 GitHub** | push/curl 偶发 GnuTLS -110 / 超时 | 走 `socks5h://127.0.0.1:7890` 代理（见 §6） |
 
 ---
 
