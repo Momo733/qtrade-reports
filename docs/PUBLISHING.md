@@ -285,6 +285,7 @@ curl -fsI "$BASE/daily-trades/$DATE-chart.html" | head -1
 | **`_data/days.yml` 字段漂移** | 首页 screener 和详情页 PnL 不一致 | 步骤 C 的 entry 必须和 步骤 B 的 front matter 完全一致 |
 | **chart 缺失但 `has_chart: true`** | 详情页 iframe 404 | 文件不在就填 `false`，并把 `chart:` 行删掉 |
 | **front matter 里日期不加引号** | YAML 解析成 date 对象，`{{ page.date }}` 变成 `2026-06-05 00:00:00 UTC` | `date: "YYYY-MM-DD"` 一定加引号 |
+| **无交易日的空交易表**（2026-06-09） | 表头+分隔行、0 数据行的表 kramdown 不解析，整段按纯文本渲染成 `\|—\|—\|...` 错乱 | 源头已修：`daily_trade_report.py` 无成交时输出"（当日无成交）"而非空表；§7 的 `grep -c '\|—\|'` 检查每次必跑 |
 | **cron 用 `TZ=` 调度**（2026-06-10） | 任务在北京 17:05（美东凌晨）触发，日报永远滞后/缺失 | Ubuntu cron 不认 `TZ` 调度，表达式一律按北京时间写（见 §1.5） |
 | **publisher 发完就以为完事**（2026-06-09） | 这天在首页 #all-days / heatmap 完全不可见，详情页没有 K 线按钮 | publisher 只做最小拷贝；步骤 B（`layout: daily` 富 front matter）和步骤 C（`days.yml` entry）必须手工补，缺一不可 |
 | **git 直连 GitHub** | push/curl 偶发 GnuTLS -110 / 超时 | 走 `socks5h://127.0.0.1:7890` 代理（见 §6） |
