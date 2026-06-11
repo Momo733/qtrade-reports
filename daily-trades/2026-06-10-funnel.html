@@ -32,11 +32,11 @@
   .page-head .meta { color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
   .legend {
     display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px;
-    color: var(--ink-2); margin-bottom: 10px;
+    color: var(--ink-2); margin-bottom: 10px; align-items: center;
   }
-  .legend .ok { color: var(--win); font-weight: 600; }
-  .legend .no { color: var(--loss); font-weight: 600; }
-  .legend .sh { color: #6b7280; font-weight: 600; }
+  .legend span { display: inline-flex; align-items: center; }
+  .legend i { display: inline-block; width: 11px; height: 11px;
+    border-radius: 2px; margin-right: 6px; }
   .xcheck { font-size: 12.5px; margin: 8px 0 14px; padding: 8px 12px;
             border-radius: 6px; border: 1px solid var(--grid); background: var(--card); }
   .xcheck.ok { border-left: 4px solid var(--win); }
@@ -46,7 +46,7 @@
     padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 18px;
   }
   .chart-card h2 { font-size: 14px; margin: 8px 10px; color: var(--ink-2); font-weight: 600; }
-  #sankey { width: 100%; height: 780px; }
+  #sankey { width: 100%; height: 720px; }
   #funnel { width: 100%; height: 500px; }
 </style>
 <script src="/qtrade-reports/assets/plotly-2.35.2.min.js"></script>
@@ -57,15 +57,16 @@
   <div class="meta">signals 67 deduped / 147 raw · call 30 / put 37 · submitted 3 · filled 3</div>
 </div>
 <div class="legend">
-  <span class="ok">→ pass</span>
-  <span class="no">✗ blocked (block_reason)</span>
-  <span class="sh">[shadow] would-block (dashed branch)</span>
+  <span><i style="background:#3b82f6"></i>通过 pass</span>
+  <span><i style="background:#ef4444"></i>拦截 blocked (block_reason)</span>
+  <span><i style="background:#9ca3af"></i>[shadow] would-block</span>
+  <span><i style="background:#10b981"></i>成交 submitted → filled</span>
 </div>
 <div class="xcheck ok">末级校验：slog 下单(entry_order_submitted)=3 · records entry_submitted=3 · records 成交(entry)=3【一致】</div>
 <div class="chart-card"><h2>Sankey — signal → gates → entry</h2><div id="sankey"></div></div>
 <div class="chart-card"><h2>Funnel — survivors per stage (call / put split)</h2><div id="funnel"></div></div>
 <script>
-const SANKEY = {"data":[{"type":"sankey","arrangement":"perpendicular","node":{"label":["Signal · 67","Quality Filter · 67","✗ gap_atr14_below_threshold · 34","Regime Filter · 33","✗ counter_trend_bear_call · 2","✗ insufficient_bars · 3","Entry Filter (chase) · 28","✗ chasing_exhausted · 1","Min-Dwell Reversal · 27","✗ current_reversal · 1","VIX / Climax Flow · 26","[shadow] +16","Skip Score · 26","✗ score_over_cutoff · 23","Quote / Sizing / BP · 3","✓ Submitted · 3","✓ Filled · 3"],"color":["rgba(80,90,110,0.85)","rgba(80,90,110,0.85)","rgba(239,83,80,0.55)","rgba(80,90,110,0.85)","rgba(239,83,80,0.55)","rgba(239,83,80,0.55)","rgba(80,90,110,0.85)","rgba(239,83,80,0.55)","rgba(80,90,110,0.85)","rgba(239,83,80,0.55)","rgba(80,90,110,0.85)","rgba(120,120,120,0.40)","rgba(80,90,110,0.85)","rgba(239,83,80,0.55)","rgba(80,90,110,0.85)","rgba(80,90,110,0.85)","rgba(37,99,235,0.55)"],"pad":30,"thickness":20,"line":{"color":"#888","width":0.5}},"link":{"source":[0,1,1,3,3,3,6,6,8,8,10,10,12,12,14,15],"target":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],"value":[67,34,33,2,3,28,1,27,1,26,16,26,23,3,3,3],"color":["rgba(38,166,154,0.45)","rgba(239,83,80,0.55)","rgba(38,166,154,0.45)","rgba(239,83,80,0.55)","rgba(239,83,80,0.55)","rgba(38,166,154,0.45)","rgba(239,83,80,0.55)","rgba(38,166,154,0.45)","rgba(239,83,80,0.55)","rgba(38,166,154,0.45)","rgba(120,120,120,0.40)","rgba(38,166,154,0.45)","rgba(239,83,80,0.55)","rgba(38,166,154,0.45)","rgba(38,166,154,0.45)","rgba(37,99,235,0.55)"],"label":["pass","gap_atr14_below_threshold","pass","counter_trend_bear_call","insufficient_bars","pass","chasing_exhausted","pass","current_reversal","pass","shadow would-block","pass","score_over_cutoff","pass","pass","filled"],"hovertemplate":"%{source.label} → %{target.label}<br>%{value} signals<extra>%{label}</extra>"}}],"layout":{"font":{"size":11},"height":780,"margin":{"l":5,"r":5,"t":25,"b":25},"paper_bgcolor":"#ffffff","hoverlabel":{"namelength":-1}}};
+const SANKEY = {"data":[{"type":"sankey","arrangement":"fixed","node":{"label":["Signal · 67","Dir CD · 67","Quality · 67","Regime · 33","✗ gap_atr14_below_threshold · 34","Entry chase · 28","✗ insufficient_bars · 3","✗ counter_trend_bear_call · 2","Min-Dwell · 27","✗ chasing_exhausted · 1","VIX/Climax · 26","✗ current_reversal · 1","SkipScore · 26","[shadow] +16","Quote/BP · 3","✗ score_over_cutoff · 23","✓ Submitted · 3","✓ Filled · 3"],"color":["#3b82f6","#64748b","#64748b","#64748b","#ef4444","#64748b","#ef4444","#ef4444","#64748b","#ef4444","#64748b","#ef4444","#64748b","#9ca3af","#64748b","#ef4444","#10b981","#059669"],"x":[0.04,0.132,0.224,0.316,0.316,0.408,0.408,0.408,0.5,0.5,0.592,0.592,0.684,0.684,0.776,0.776,0.868,0.96],"y":[0.5,0.5,0.5,0.2463,0.7463,0.449,0.6803,0.7176,0.5015,0.7104,0.554,0.7555,0.5472,0.8606,0.5024,0.6964,0.5624,0.6224],"pad":0,"thickness":13,"line":{"color":"#ffffff","width":1}},"link":{"source":[0,1,2,2,3,3,3,5,5,8,8,10,10,12,12,14,16],"target":[1,2,4,3,6,7,5,9,8,11,10,13,12,15,14,16,17],"value":[67,67,34,33,3,2,28,1,27,1,26,16,26,23,3,3,3],"color":["rgba(59,130,246,0.22)","rgba(59,130,246,0.22)","rgba(239,68,68,0.28)","rgba(59,130,246,0.22)","rgba(239,68,68,0.28)","rgba(239,68,68,0.28)","rgba(59,130,246,0.22)","rgba(239,68,68,0.28)","rgba(59,130,246,0.22)","rgba(239,68,68,0.28)","rgba(59,130,246,0.22)","rgba(156,163,175,0.26)","rgba(59,130,246,0.22)","rgba(239,68,68,0.28)","rgba(59,130,246,0.22)","rgba(59,130,246,0.22)","rgba(16,185,129,0.40)"],"label":["pass","pass","gap_atr14_below_threshold","pass","insufficient_bars","counter_trend_bear_call","pass","chasing_exhausted","pass","current_reversal","pass","shadow would-block","pass","score_over_cutoff","pass","pass","filled"],"hovertemplate":"%{source.label} → %{target.label}<br>%{value} signals<extra>%{label}</extra>"}}],"layout":{"font":{"size":12,"color":"#374151"},"height":720,"margin":{"l":10,"r":10,"t":20,"b":20},"paper_bgcolor":"#ffffff","hoverlabel":{"namelength":-1}}};
 const FUNNEL = {"data":[{"type":"funnel","name":"all","y":["Signal","Direction Cooldown","Quality Filter","Regime Filter","Entry Filter (chase)","Min-Dwell Reversal","VIX / Climax Flow","Skip Score","Quote / Sizing / BP","Filled"],"x":[67,67,33,28,27,26,26,3,3,3],"textinfo":"value+percent initial","marker":{"color":"#2563eb"}},{"type":"funnel","name":"call","y":["Signal","Direction Cooldown","Quality Filter","Regime Filter","Entry Filter (chase)","Min-Dwell Reversal","VIX / Climax Flow","Skip Score","Quote / Sizing / BP","Filled"],"x":[30,30,19,14,14,13,13,1,1,0],"textinfo":"value","marker":{"color":"#26a69a"}},{"type":"funnel","name":"put","y":["Signal","Direction Cooldown","Quality Filter","Regime Filter","Entry Filter (chase)","Min-Dwell Reversal","VIX / Climax Flow","Skip Score","Quote / Sizing / BP","Filled"],"x":[37,37,14,14,13,13,13,2,2,0],"textinfo":"value","marker":{"color":"#ef5350"}}],"layout":{"funnelmode":"group","margin":{"l":170,"r":50,"t":30,"b":20},"yaxis":{"tickfont":{"size":11}},"legend":{"orientation":"h","y":-0.15},"height":500,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff"}};
 try { if (window.parent !== window.self) document.body.style.padding = '8px'; } catch (e) {}
 const cfg = { responsive: true, displaylogo: false,
