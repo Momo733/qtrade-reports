@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- chart_schema=5 -->
+<!-- chart_schema=6 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -260,8 +260,8 @@ window.addEventListener('resize', () => Plotly.Plots.resize(chartDiv));
 // --- Pinned copy card -----------------------------------------------------
 //
 // Plotly's hover tooltip is non-interactive, so we hook plotly_click on
-// the entry / exit traces and pop a sticky card that hosts a real Copy
-// button. customdata on each marker is `[title, copyText]`; we never
+// the entry / exit / signal traces and pop a sticky card that hosts a real
+// Copy button. customdata on each marker is `[title, copyText]`; we never
 // touch the click event for any other trace (e.g. candlestick body).
 (() => {
   const card = document.getElementById('qt-copy-card');
