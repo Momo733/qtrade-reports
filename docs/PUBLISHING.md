@@ -149,6 +149,8 @@ cp "$SRC/$DATE-chart.html"  "$DST/$DATE-chart.html"
 | `first_entry_et` | 交易表 `入场ET` 列的最小值，截到 `HH:MM`（无交易日省略） |
 | `last_exit_et` | 交易表 `出场ET` 列的最大值，截到 `HH:MM`（无交易日省略） |
 | `has_chart` | `daily-trades/<date>-chart.html` 存在则 `true` |
+| `funnel` | 信号漏斗页文件名，固定 `<date>-funnel.html`（有该文件才填） |
+| `has_funnel` | `daily-trades/<date>-funnel.html` 存在则 `true` |
 
 ### 4.2 标准模板
 
@@ -172,8 +174,16 @@ first_entry_et: "11:02"
 last_exit_et: "14:49"
 chart: "YYYY-MM-DD-chart.html"
 has_chart: true
+funnel: "YYYY-MM-DD-funnel.html"
+has_funnel: true
 ---
 ```
+
+> **信号漏斗图**：在 QTrade 仓库跑 `python3 scripts/signal_funnel_chart.py --date YYYY-MM-DD`
+> 生成 `daily-trades/<date>-funnel.html`（数据源是 trader slog + `bin/records`），
+> 拷到本仓库 `daily-trades/` 后填 `funnel:` / `has_funnel: true`，详情页会在 K 线下方
+> 多出一个「信号漏斗」面板。某天 slog 无信号覆盖（早期日志已轮转）则不生成文件，
+> 省略这两行即可。
 
 > **`title` 写法**：盈利日 `(+501.00 USD)`，亏损日 `(-123.00 USD)`，零交易日 `(±0.00 USD)`。
 
