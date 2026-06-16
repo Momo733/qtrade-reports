@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!-- funnel_schema=1 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2026-05-07 — Signal Funnel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --grid: #e5e7eb;
+    --bg:   #fafbfc;
+    --card: #ffffff;
+    --ink-1: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #6b7280;
+    --win:  #1f9d76;
+    --loss: #d23f3f;
+  }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--ink-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+  }
+  body { padding: 18px 22px 28px; box-sizing: border-box; }
+  .page-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 16px;
+    margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--grid);
+  }
+  .page-head h1 { font-size: 19px; font-weight: 600; margin: 0; }
+  .page-head .meta { color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px;
+    color: var(--ink-2); margin-bottom: 10px;
+  }
+  .legend .ok { color: var(--win); font-weight: 600; }
+  .legend .no { color: var(--loss); font-weight: 600; }
+  .legend .sh { color: #6b7280; font-weight: 600; }
+  .xcheck { font-size: 12.5px; margin: 8px 0 14px; padding: 8px 12px;
+            border-radius: 6px; border: 1px solid var(--grid); background: var(--card); }
+  .xcheck.ok { border-left: 4px solid var(--win); }
+  .xcheck.warn { border-left: 4px solid var(--loss); }
+  .chart-card {
+    background: var(--card); border: 1px solid var(--grid); border-radius: 10px;
+    padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 18px;
+  }
+  .chart-card h2 { font-size: 14px; margin: 8px 10px; color: var(--ink-2); font-weight: 600; }
+  #sankey { width: 100%; height: 700px; }
+  #funnel { width: 100%; height: 550px; }
+</style>
+<script src="/qtrade-reports/assets/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div class="page-head">
+  <h1>2026-05-07 <span style="color:var(--ink-3); font-weight:400;">· Signal Funnel</span></h1>
+  <div class="meta">signals 30 deduped / 63 raw · call 15 / put 15 · submitted 0 · filled 23</div>
+</div>
+<div class="legend">
+  <span class="ok">→ pass</span>
+  <span class="no">✗ blocked (block_reason)</span>
+  <span class="sh">[shadow] would-block (dashed branch)</span>
+</div>
+<div class="xcheck warn">末级校验：slog 下单(entry_order_submitted)=0 · records entry_submitted=29 · records 成交(entry)=23【不一致，需排查】</div>
+<div class="chart-card"><h2>Sankey — signal → gates → entry</h2><div id="sankey"></div></div>
+<div class="chart-card"><h2>Funnel — survivors per stage (call / put split)</h2><div id="funnel"></div></div>
+<script>
+const SANKEY = {"data":[{"type":"sankey","arrangement":"perpendicular","node":{"label":["Signal · 30","Quality Filter · 30","✗ blocked · 30","✓ Submitted · 0","✓ Filled · 23"],"color":["rgba(80,90,110,0.85)","rgba(80,90,110,0.85)","rgba(239,83,80,0.55)","rgba(80,90,110,0.85)","rgba(37,99,235,0.55)"],"pad":30,"thickness":20,"line":{"color":"#888","width":0.5},"textfont":{"size":10}},"link":{"source":[0,1,3],"target":[1,2,4],"value":[30,30,23],"color":["rgba(38,166,154,0.45)","rgba(239,83,80,0.55)","rgba(37,99,235,0.55)"],"label":["pass","blocked","filled"],"hovertemplate":"%{source.label} → %{target.label}<br>%{value} signals<extra>%{label}</extra>"}}],"layout":{"font":{"size":11},"height":650,"margin":{"l":5,"r":5,"t":25,"b":25},"paper_bgcolor":"#ffffff","hoverlabel":{"namelength":-1}}};
+const FUNNEL = {"data":[{"type":"funnel","name":"all","y":["Signal","Direction Cooldown","Quality Filter","Filled"],"x":[30,30,0,23],"textinfo":"value+percent initial","marker":{"color":"#2563eb"}},{"type":"funnel","name":"call","y":["Signal","Direction Cooldown","Quality Filter","Filled"],"x":[15,15,0,0],"textinfo":"value","marker":{"color":"#26a69a"}},{"type":"funnel","name":"put","y":["Signal","Direction Cooldown","Quality Filter","Filled"],"x":[15,15,0,0],"textinfo":"value","marker":{"color":"#ef5350"}}],"layout":{"funnelmode":"group","margin":{"l":170,"r":50,"t":30,"b":20},"yaxis":{"tickfont":{"size":11}},"legend":{"orientation":"h","y":-0.15},"height":500,"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff"}};
+try { if (window.parent !== window.self) document.body.style.padding = '8px'; } catch (e) {}
+const cfg = { responsive: true, displaylogo: false,
+              modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
+const sankeyDiv = document.getElementById('sankey');
+const funnelDiv = document.getElementById('funnel');
+Plotly.newPlot(sankeyDiv, SANKEY.data, SANKEY.layout, cfg);
+Plotly.newPlot(funnelDiv, FUNNEL.data, FUNNEL.layout, cfg);
+window.addEventListener('resize', () => {
+  Plotly.Plots.resize(sankeyDiv);
+  Plotly.Plots.resize(funnelDiv);
+});
+</script>
+</body>
+</html>
