@@ -57,9 +57,9 @@
   losses: 0
   breakeven: 0
   win_rate: 0.0
-  biggest_win: 0
-  biggest_loss: 0
-  max_drawdown_usd: 0.0
+  biggest_win: null
+  biggest_loss: null
+  max_drawdown_usd: null
   has_chart: false
 - date: "2026-05-11"
   pnl: -979.0
@@ -133,9 +133,9 @@
   losses: 0
   breakeven: 0
   win_rate: 0.0
-  biggest_win: 0
-  biggest_loss: 0
-  max_drawdown_usd: 0.0
+  biggest_win: null
+  biggest_loss: null
+  max_drawdown_usd: null
   has_chart: false
 - date: "2026-05-18"
   pnl: 1607.0
