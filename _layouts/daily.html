@@ -249,6 +249,15 @@ layout: default
   var tables = root.querySelectorAll('table');
   tables.forEach(function(t){
     t.classList.add('qt-table');
+    // Wrap every markdown table in a horizontal-scroll container so wide
+    // tables (the trade log now carries 19 columns + a copy column) scroll
+    // inside the card instead of bleeding past the page width.
+    if (t.parentNode && !t.parentNode.classList.contains('qt-table-scroll')) {
+      var scroll = document.createElement('div');
+      scroll.className = 'qt-table-scroll overflow-x-auto';
+      t.parentNode.insertBefore(scroll, t);
+      scroll.appendChild(t);
+    }
     var firstHeader = t.querySelector('thead th, tr th');
     if (firstHeader && /^#?$/.test(firstHeader.textContent.trim())) {
       t.classList.add('qt-trade-table');

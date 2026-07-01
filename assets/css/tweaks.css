@@ -54,6 +54,11 @@ table.qt-trade-table thead th[data-sort-dir="desc"]::after { content: "↓"; opa
   margin-bottom: 0.5em;
   width: auto;
 }
+/* Wide tables (e.g. the 19-column trade log) scroll horizontally inside the
+   card instead of overflowing the page. daily.html wraps each qt-md table in
+   this container; the rule is a fallback in case the Tailwind utility class is
+   unavailable in the build. */
+.qt-table-scroll { overflow-x: auto; max-width: 100%; }
 .qt-md table th, .qt-md table td {
   padding: 4px 9px;
   border-bottom: 1px solid #e0e3eb;
