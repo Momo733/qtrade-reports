@@ -558,3 +558,14 @@
   first_entry_et: "10:42"
   last_exit_et: "14:47"
   has_chart: true
+- date: "2026-07-03"
+  pnl: 0.0
+  trades: 0
+  wins: 0
+  losses: 0
+  breakeven: 0
+  win_rate: 0.0
+  biggest_win: 0
+  biggest_loss: 0
+  max_drawdown_usd: 0.0
+  has_chart: false
