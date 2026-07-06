@@ -569,3 +569,16 @@
   biggest_loss: 0
   max_drawdown_usd: 0.0
   has_chart: false
+- date: "2026-07-06"
+  pnl: 141.0
+  trades: 14
+  wins: 10
+  losses: 4
+  breakeven: 0
+  win_rate: 0.7143
+  biggest_win: 144.0
+  biggest_loss: -240.0
+  max_drawdown_usd: -468.0
+  first_entry_et: "10:56"
+  last_exit_et: "14:12"
+  has_chart: true
