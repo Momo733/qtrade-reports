@@ -621,3 +621,16 @@
   first_entry_et: "10:10"
   last_exit_et: "13:12"
   has_chart: true
+- date: "2026-07-10"
+  pnl: 13.0
+  trades: 11
+  wins: 5
+  losses: 6
+  breakeven: 0
+  win_rate: 0.4545
+  biggest_win: 260.0
+  biggest_loss: -225.0
+  max_drawdown_usd: -515.0
+  first_entry_et: "10:21"
+  last_exit_et: "13:19"
+  has_chart: true
