@@ -34,6 +34,16 @@ html.dark .qt-hm-loss-1 { background: #3a1d20; }
 html.dark .qt-hm-loss-2 { background: #7e2b30; }
 html.dark .qt-hm-loss-3 { background: #ef5350; }
 
+/* ---------------- Date picker popover ---------------- */
+
+/* The month blocks in `_includes/date_picker.html` are toggled via the `hidden`
+   attribute, but they also carry Tailwind's `grid` utility. Tailwind's
+   preflight rule `[hidden]:where(...)` and `.grid` have equal specificity and
+   utilities are emitted later, so `grid` would win and every month would show
+   at once. This override is (0,2,0) and settles it deterministically.
+   Guarded by tests/test_hidden_display_guard.py. */
+.qt-cal-month[hidden] { display: none; }
+
 /* ---------------- Sortable table indicators ---------------- */
 
 table.qt-trade-table thead th[data-sortable]::after {

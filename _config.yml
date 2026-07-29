@@ -21,6 +21,7 @@ exclude:
   - vendor
   - Gemfile
   - Gemfile.lock
+  - tests
 
 # Render generated chart HTMLs as-is (not via Liquid).
 include:

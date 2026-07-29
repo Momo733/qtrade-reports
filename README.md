@@ -22,7 +22,19 @@ _layouts/
 assets/
   plotly-2.35.2.min.js    shared chart library
   js/datepicker.js        binds every [data-qt-cal-root] popover instance
+tests/
+  test_hidden_display_guard.py
+                          stdlib guard: a `hidden` attribute must not be
+                          defeated by a Tailwind display utility class
 index.md                  layout: home stub
+```
+
+## Tests
+
+Stdlib only, no dependencies:
+
+```bash
+python3 -m unittest discover tests
 ```
 
 ## How updates happen
