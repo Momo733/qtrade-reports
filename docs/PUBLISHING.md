@@ -41,8 +41,9 @@ docs/daily-trades/<date>-chart.html  ─┤  →  daily-trades/<date>.md
 整条流水线由 `ubuntu` 用户的 crontab 驱动（`crontab -l` 查看），顺序为：
 
 ```
-daily_trade_report.py → regime_shadow.py → climax_tp_shadow.py
-→ sweep_tier_params.py → daily_trade_chart.py → publish_to_reports.py
+daily_trade_report.py → regime_shadow.py → sweep_tier_params.py
+→ daily_trade_chart.py → signal_funnel_chart.py → daily_shadow_coverage.sh
+→ publish_to_reports.py
 （20 分钟后）check_publish_drift.py
 ```
 
@@ -68,6 +69,12 @@ daily_trade_report.py → regime_shadow.py → climax_tp_shadow.py
 **报告缺失时的排查顺序**：
 
 ```bash
+# 0) 站点落后但本地文件是新的？先看有没有 commit 了却没推上去
+cd /home/ubuntu/qtrade-reports
+git status -sb                     # "ahead N" 就是没推成功
+git log --oneline origin/main..main
+grep 'push FAILED' /home/ubuntu/QTrade/bin/logs/publish_to_reports.log | tail
+
 # 1) 昨晚的原始数据在不在（有就一定能补出报告，0 笔交易也会出）
 ls -lh /home/ubuntu/QTrade/bin/records/YYYY-MM-DD.json
 
@@ -76,6 +83,27 @@ grep CRON /var/log/syslog | grep ubuntu | grep -v stargate | tail
 
 # 3) 脚本自身报错
 tail /home/ubuntu/QTrade/bin/logs/daily_report.log
+```
+
+**⚠️ push 静默失败（2026-07-29 踩过）**：`publish_to_reports.py` 会把
+「写文件 + commit」和「push」分成两步，push 失败只在日志里留一行
+`git push FAILED (will retry next run)`，磁盘上两个仓完全一致，
+所以 `check_publish_drift.py` 当时一路报 `OK`——健康检查的盲区正好落在
+出事的地方。2026-07-24 / 07-27 / 07-28 三天就这样积压了三天没上线。
+
+已做的两处加固：
+
+- `publish_to_reports.py` 的 `_git_push_with_retry()`：同一次运行内最多
+  `PUSH_ATTEMPTS`（3）次尝试，退避 `PUSH_BACKOFF_SECONDS`（5s / 15s），
+  扛住单次 TLS 抖动。
+- `check_publish_drift.py` 的 `_unpushed_commits()`：本地 `main` 超前
+  `origin/main` 时输出 `UNPUSHED` 状态行，header 里带 `unpushed=N`，
+  并让退出码非 0。它只读本地追踪引用、不做 `git fetch`，健康检查不依赖网络。
+
+手工补救就是一条命令（代理见 §6）：
+
+```bash
+cd /home/ubuntu/qtrade-reports && git push origin main
 ```
 
 ---
@@ -309,6 +337,8 @@ curl -fsI "$BASE/daily-trades/$DATE-chart.html" | head -1
 | **cron 用 `TZ=` 调度**（2026-06-10） | 任务在北京 17:05（美东凌晨）触发，日报永远滞后/缺失 | Ubuntu cron 不认 `TZ` 调度，表达式一律按北京时间写（见 §1.5） |
 | **publisher 发完就以为完事**（2026-06-09） | 这天在首页 #all-days / heatmap 完全不可见，详情页没有 K 线按钮 | publisher 只做最小拷贝；步骤 B（`layout: daily` 富 front matter）和步骤 C（`days.yml` entry）必须手工补，缺一不可 |
 | **git 直连 GitHub** | push/curl 偶发 GnuTLS -110 / 超时 | 走 `socks5h://127.0.0.1:7890` 代理（见 §6） |
+| **push 失败但 drift 检查报 OK**（2026-07-29） | 日报 commit 了没推上去，站点静默落后几天，`check_publish_drift` 全绿 | publisher 已加 push 重试，drift 检查已加 `UNPUSHED` 检测（见 §1.5）；排查先跑 `git status -sb` |
+| **`hidden` 属性被 Tailwind display utility 压掉**（2026-07-29） | 下拉日历把所有月份摊成一条长列表，月份标题只显示一个月 | `[hidden]` preflight 与 `.grid` 特异度相同且排在前面；需要 `.qt-cal-month[hidden]{display:none}` 这类 (0,2,0) 提权规则，由 `tests/test_hidden_display_guard.py` 守卫 |
 
 ---
 
