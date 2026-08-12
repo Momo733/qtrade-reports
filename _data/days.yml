@@ -920,3 +920,16 @@
   first_entry_et: "09:46"
   last_exit_et: "13:46"
   has_chart: true
+- date: "2026-08-12"
+  pnl: -321.0
+  trades: 4
+  wins: 0
+  losses: 4
+  breakeven: 0
+  win_rate: 0.0
+  biggest_win: 0
+  biggest_loss: -138.0
+  max_drawdown_usd: -321.0
+  first_entry_et: "10:31"
+  last_exit_et: "14:45"
+  has_chart: true
