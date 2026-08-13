@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<!-- chart_schema=9 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2026-08-13 — Daily Chart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --win:  #1f9d76;
+    --loss: #d23f3f;
+    --neutral: #6b7280;
+    --grid: #e5e7eb;
+    --bg:   #fafbfc;
+    --card: #ffffff;
+    --ink-1: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #6b7280;
+    --accent: #2563eb;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+  }
+  body {
+    padding: 18px 22px 28px;
+    box-sizing: border-box;
+  }
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px 16px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .page-head h1 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink-1);
+  }
+  .page-head .meta {
+    color: var(--ink-2);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-bottom: 10px;
+  }
+  .legend strong { color: var(--ink-1); margin-right: 6px; }
+  .legend .win  { color: var(--win);  font-weight: 600; }
+  .legend .loss { color: var(--loss); font-weight: 600; }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  #chart {
+    width: 100%;
+    height: calc(100vh - 240px);
+    min-height: 560px;
+  }
+
+  /* trade table — clean, dense, easy to scan */
+  table.trades {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 22px;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.trades caption {
+    text-align: left;
+    padding: 12px 14px 8px;
+    font-weight: 600;
+    color: var(--ink-1);
+    background: var(--card);
+    caption-side: top;
+  }
+  table.trades th, table.trades td {
+    padding: 7px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--grid);
+  }
+  table.trades th {
+    background: #f6f8fa;
+    color: var(--ink-2);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--grid);
+    position: sticky;
+    top: 0;
+  }
+  table.trades th:first-child, table.trades td:first-child { text-align: center; width: 38px; color: var(--ink-3); }
+  table.trades th:nth-child(2), table.trades td:nth-child(2) { text-align: left; font-family: monospace; font-size: 11.5px; }
+  table.trades th:last-child, table.trades td:last-child { text-align: left; }
+  table.trades tbody tr:last-child td { border-bottom: 0; }
+  table.trades tbody tr:hover td { background: #f6f8fa; }
+  table.trades td.dir-call { color: var(--win);  font-weight: 600; }
+  table.trades td.dir-put  { color: var(--loss); font-weight: 600; }
+  table.trades tr.win  td.pnl { color: var(--win);  font-weight: 600; }
+  table.trades tr.loss td.pnl { color: var(--loss); font-weight: 600; }
+
+  /* When embedded in an iframe inside the daily page the table is
+     redundant with the markdown table below it; hide it there. */
+  body.embedded table.trades { display: none; }
+
+  /* Pinned copy card — shows on click of an entry/exit marker. The
+     Plotly default hover popup is non-interactive (mouse-out kills
+     it), so we replicate the data into a click-pinned overlay that
+     hosts a real Copy button. */
+  #qt-copy-card {
+    position: fixed;
+    z-index: 1000;
+    width: 320px;
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    padding: 10px 12px 12px;
+    font-size: 13px;
+    color: var(--ink-1);
+  }
+  #qt-copy-card[hidden] { display: none; }
+  #qt-copy-card .qt-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  #qt-copy-card .qt-card-title {
+    font-weight: 600;
+    color: var(--ink-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #qt-copy-card pre {
+    margin: 4px 0 10px;
+    padding: 8px 10px;
+    background: #f6f8fa;
+    border: 1px solid var(--grid);
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--ink-1);
+  }
+  #qt-copy-card button {
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--grid);
+    background: var(--card);
+    font-size: 12px;
+    padding: 5px 12px;
+    color: var(--ink-1);
+    font-family: inherit;
+  }
+  #qt-copy-card button.qt-card-copy {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 600;
+    width: 100%;
+  }
+  #qt-copy-card button.qt-card-copy:hover { filter: brightness(1.05); }
+  #qt-copy-card button.qt-card-copy.copied { background: var(--win); border-color: var(--win); }
+  #qt-copy-card button.qt-card-close {
+    background: transparent;
+    border: none;
+    color: var(--ink-3);
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  #qt-copy-card button.qt-card-close:hover { color: var(--ink-1); }
+</style>
+<script src="/qtrade-reports/assets/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div class="page-head">
+  <h1>2026-08-13 <span style="color:var(--ink-3); font-weight:400;">· QQQ 1-min</span></h1>
+  <div class="meta">open 724.64 · close 732.03 · high 733.96 · low 724.04 · 391 bars · 13 trades · 28 signals · 13 持仓信号</div>
+</div>
+<div class="legend">
+  <strong>Entry</strong>
+  <span>▲ call</span><span>▼ put</span>
+  <span class="win">● win</span><span class="loss">● loss</span>
+  <strong style="margin-left:8px;">Exit</strong>
+  <span>✕ stop_loss</span>
+  <span>★ trailing / partial</span>
+  <span>● trend_stop</span>
+  <span>◆ timeout</span>
+  <span>⬢ climax</span>
+  <strong style="margin-left:8px;">持仓期信号</strong>
+  <span>◇ 空心=持仓中观察（满足未开 / 被拦）· 见图例切换</span>
+</div>
+<div class="chart-card"><div id="chart"></div></div>
+<table class='trades'>
+<thead><tr><th>#</th><th>Symbol</th><th>Dir</th><th>Entry Reason</th><th>Qty</th><th>Entry ET</th><th>Exit ET</th><th>Entry $</th><th>Exit $</th><th>PnL</th><th>Max%</th><th>Reason</th></tr></thead><tbody>
+<tr class='win'><td>#1</td><td>QQQ260813C730000.US</td><td class='dir-call'>call</td><td title='call breakout: close=729.62, ref=728.90, gap=0.0010'>breakout</td><td>2</td><td>09:46:58</td><td>09:49:51</td><td>1.65</td><td>2.18</td><td class='pnl'>+106.00</td><td>37.6%</td><td>trailing_take_profit_tier1</td></tr>
+<tr class='win'><td>#2</td><td>QQQ260813C730000.US</td><td class='dir-call'>call</td><td title='call breakout: close=729.62, ref=728.90, gap=0.0010'>breakout</td><td>1</td><td>09:46:58</td><td>10:00:02</td><td>1.65</td><td>2.50</td><td class='pnl'>+85.00</td><td>68.5%</td><td>trailing_take_profit_tier2</td></tr>
+<tr class='win'><td>#3</td><td>QQQ260813C730000.US</td><td class='dir-call'>call</td><td title='call breakout: close=729.62, ref=728.90, gap=0.0010'>breakout</td><td>1</td><td>09:46:58</td><td>10:05:33</td><td>1.65</td><td>2.91</td><td class='pnl'>+126.00</td><td>75.2%</td><td>partial_take_profit</td></tr>
+<tr class='win'><td>#4</td><td>QQQ260813C730000.US</td><td class='dir-call'>call</td><td title='call breakout: close=729.62, ref=728.90, gap=0.0010'>breakout</td><td>1</td><td>09:46:58</td><td>10:05:44</td><td>1.65</td><td>2.80</td><td class='pnl'>+115.00</td><td>75.2%</td><td>trailing_take_profit_tier3</td></tr>
+<tr class='loss'><td>#5</td><td>QQQ260813C733000.US</td><td class='dir-call'>call</td><td title='call breakout: close=732.35, ref=732.10, gap=0.0003'>breakout</td><td>7</td><td>10:12:02</td><td>10:16:18</td><td>1.41</td><td>1.25</td><td class='pnl'>-112.00</td><td>1.4%</td><td>confirmed_dud_cut</td></tr>
+<tr class='win'><td>#6</td><td>QQQ260813C734000.US</td><td class='dir-call'>call</td><td title='call breakout: close=732.90, ref=732.52, gap=0.0005'>breakout</td><td>4</td><td>10:29:03</td><td>10:32:58</td><td>1.08</td><td>1.35</td><td class='pnl'>+108.00</td><td>30.6%</td><td>trailing_take_profit_tier1</td></tr>
+<tr class='win'><td>#7</td><td>QQQ260813C734000.US</td><td class='dir-call'>call</td><td title='call breakout: close=732.90, ref=732.52, gap=0.0005'>breakout</td><td>5</td><td>10:29:03</td><td>10:39:00</td><td>1.08</td><td>1.22</td><td class='pnl'>+70.00</td><td>37.0%</td><td>trend_stop</td></tr>
+<tr class='loss'><td>#8</td><td>QQQ260813C732000.US</td><td class='dir-call'>call</td><td title='reverse_pair_fade|signal=put|run=2'>reverse_pair</td><td>4</td><td>11:32:50</td><td>11:34:42</td><td>1.09</td><td>0.94</td><td class='pnl'>-60.00</td><td>6.4%</td><td>reverse_skip_score_cut</td></tr>
+<tr class='loss'><td>#9</td><td>QQQ260813C732000.US</td><td class='dir-call'>call</td><td title='call breakout: close=731.08, ref=730.84, gap=0.0003'>breakout</td><td>12</td><td>12:02:41</td><td>12:17:03</td><td>0.79</td><td>0.60</td><td class='pnl'>-228.00</td><td>25.3%</td><td>trend_stop</td></tr>
+<tr class='loss'><td>#10</td><td>QQQ260813C732000.US</td><td class='dir-call'>call</td><td title='call breakout: close=731.73, ref=731.41, gap=0.0004'>breakout</td><td>4</td><td>12:25:44</td><td>12:53:01</td><td>1.00</td><td>0.88</td><td class='pnl'>-48.00</td><td>13.0%</td><td>trend_stop</td></tr>
+<tr class='win'><td>#11</td><td>QQQ260813C733000.US</td><td class='dir-call'>call</td><td title='call breakout: close=732.65, ref=732.44, gap=0.0003'>breakout</td><td>1</td><td>14:34:03</td><td>14:42:16</td><td>0.55</td><td>0.72</td><td class='pnl'>+17.00</td><td>34.5%</td><td>trailing_take_profit_tier1</td></tr>
+<tr class='win'><td>#12</td><td>QQQ260813C733000.US</td><td class='dir-call'>call</td><td title='call breakout: close=732.65, ref=732.44, gap=0.0003'>breakout</td><td>1</td><td>14:34:03</td><td>15:00:58</td><td>0.55</td><td>0.98</td><td class='pnl'>+43.00</td><td>76.4%</td><td>partial_take_profit</td></tr>
+<tr class='win'><td>#13</td><td>QQQ260813C733000.US</td><td class='dir-call'>call</td><td title='call breakout: close=732.65, ref=732.44, gap=0.0003'>breakout</td><td>1</td><td>14:34:03</td><td>15:01:02</td><td>0.55</td><td>0.97</td><td class='pnl'>+42.00</td><td>76.4%</td><td>trailing_take_profit_tier3</td></tr>
+</tbody></table>
+<div id="qt-copy-card" hidden role="dialog" aria-label="Trade info">
+  <div class="qt-card-head">
+    <span class="qt-card-title" data-qt-card-title></span>
+    <button type="button" class="qt-card-close" data-qt-card-close aria-label="Close">×</button>
+  </div>
+  <pre data-qt-card-text></pre>
+  <button type="button" class="qt-card-copy" data-qt-card-copy>复制</button>
+</div>
+<script>
+const FIG = {"data":[{"type":"candlestick","x":["09:30","09:31","09:32","09:33","09:34","09:35","09:36","09:37","09:38","09:39","09:40","09:41","09:42","09:43","09:44","09:45","09:46","09:47","09:48","09:49","09:50","09:51","09:52","09:53","09:54","09:55","09:56","09:57","09:58","09:59","10:00","10:01","10:02","10:03","10:04","10:05","10:06","10:07","10:08","10:09","10:10","10:11","10:12","10:13","10:14","10:15","10:16","10:17","10:18","10:19","10:20","10:21","10:22","10:23","10:24","10:25","10:26","10:27","10:28","10:29","10:30","10:31","10:32","10:33","10:34","10:35","10:36","10:37","10:38","10:39","10:40","10:41","10:42","10:43","10:44","10:45","10:46","10:47","10:48","10:49","10:50","10:51","10:52","10:53","10:54","10:55","10:56","10:57","10:58","10:59","11:00","11:01","11:02","11:03","11:04","11:05","11:06","11:07","11:08","11:09","11:10","11:11","11:12","11:13","11:14","11:15","11:16","11:17","11:18","11:19","11:20","11:21","11:22","11:23","11:24","11:25","11:26","11:27","11:28","11:29","11:30","11:31","11:32","11:33","11:34","11:35","11:36","11:37","11:38","11:39","11:40","11:41","11:42","11:43","11:44","11:45","11:46","11:47","11:48","11:49","11:50","11:51","11:52","11:53","11:54","11:55","11:56","11:57","11:58","11:59","12:00","12:01","12:02","12:03","12:04","12:05","12:06","12:07","12:08","12:09","12:10","12:11","12:12","12:13","12:14","12:15","12:16","12:17","12:18","12:19","12:20","12:21","12:22","12:23","12:24","12:25","12:26","12:27","12:28","12:29","12:30","12:31","12:32","12:33","12:34","12:35","12:36","12:37","12:38","12:39","12:40","12:41","12:42","12:43","12:44","12:45","12:46","12:47","12:48","12:49","12:50","12:51","12:52","12:53","12:54","12:55","12:56","12:57","12:58","12:59","13:00","13:01","13:02","13:03","13:04","13:05","13:06","13:07","13:08","13:09","13:10","13:11","13:12","13:13","13:14","13:15","13:16","13:17","13:18","13:19","13:20","13:21","13:22","13:23","13:24","13:25","13:26","13:27","13:28","13:29","13:30","13:31","13:32","13:33","13:34","13:35","13:36","13:37","13:38","13:39","13:40","13:41","13:42","13:43","13:44","13:45","13:46","13:47","13:48","13:49","13:50","13:51","13:52","13:53","13:54","13:55","13:56","13:57","13:58","13:59","14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15","14:16","14:17","14:18","14:19","14:20","14:21","14:22","14:23","14:24","14:25","14:26","14:27","14:28","14:29","14:30","14:31","14:32","14:33","14:34","14:35","14:36","14:37","14:38","14:39","14:40","14:41","14:42","14:43","14:44","14:45","14:46","14:47","14:48","14:49","14:50","14:51","14:52","14:53","14:54","14:55","14:56","14:57","14:58","14:59","15:00","15:01","15:02","15:03","15:04","15:05","15:06","15:07","15:08","15:09","15:10","15:11","15:12","15:13","15:14","15:15","15:16","15:17","15:18","15:19","15:20","15:21","15:22","15:23","15:24","15:25","15:26","15:27","15:28","15:29","15:30","15:31","15:32","15:33","15:34","15:35","15:36","15:37","15:38","15:39","15:40","15:41","15:42","15:43","15:44","15:45","15:46","15:47","15:48","15:49","15:50","15:51","15:52","15:53","15:54","15:55","15:56","15:57","15:58","15:59","16:00"],"open":[724.64,724.71,724.19,724.46,724.95,725.97,726.85,727.92,728.05,727.96,728.24,728.42,727.62,728.1,727.53,727.64,728.88,729.62,729.94,730.3,730.59,731.01,730.93,730.66,730.32,730.86,730.5,730.9,731.01,731.61,731.57,731.71,731.38,731.71,731.41,731.61,731.73,731.51,731.47,731.53,731.64,732.07,732.36,732.33,732.3,732.27,732.24,732.31,732.25,732.36,732.08,731.99,732.29,732.33,732.39,732.31,732.43,732.36,732.42,732.91,732.95,733.03,733.33,733.49,733.39,733.66,733.64,733.63,733.48,733.27,733.38,733.52,733.12,733.17,733.17,733.0,732.62,733.02,732.97,732.74,732.58,732.41,732.61,732.69,732.6,732.77,732.3,732.32,732.53,732.53,732.14,732.66,732.82,732.57,732.11,732.12,732.57,732.51,732.27,732.27,732.5,732.67,732.75,732.42,732.84,732.6,732.64,732.52,732.6,732.39,732.75,732.76,733.0,732.96,732.99,732.91,732.57,732.7,732.37,731.81,731.92,731.87,731.66,731.46,731.53,730.86,731.11,730.77,730.82,730.89,731.01,730.77,731.18,731.61,731.39,731.05,730.77,730.87,730.71,730.59,730.73,730.58,730.23,730.15,730.42,730.23,730.33,730.54,730.18,729.99,730.15,730.48,730.85,731.16,731.32,731.01,731.4,731.28,731.25,731.49,731.3,731.34,731.22,731.09,730.89,730.74,730.94,730.66,730.72,730.72,730.83,730.98,731.01,731.26,731.33,731.34,731.78,731.72,731.74,731.76,731.84,732.08,731.99,731.86,732.09,731.83,731.95,731.87,731.78,731.84,731.61,731.5,731.63,731.83,731.85,731.75,731.87,731.86,731.94,732.05,731.98,732.09,732.07,731.86,731.84,731.75,731.77,731.73,731.78,731.88,732.0,732.35,732.5,732.46,732.63,732.59,732.81,732.62,732.66,732.77,732.83,732.88,732.92,732.86,732.81,732.79,732.78,732.93,732.93,733.02,733.2,733.11,733.17,733.12,733.08,733.16,733.13,733.1,733.15,733.21,733.05,733.15,733.1,733.09,732.91,732.99,732.95,732.97,732.75,732.78,732.74,732.87,732.67,732.66,732.67,732.52,732.75,732.65,732.66,732.67,732.63,732.67,732.52,732.46,732.49,732.4,732.44,732.28,732.58,732.58,732.3,732.3,732.34,732.29,732.38,732.36,732.49,732.19,732.15,732.09,732.14,732.23,732.2,732.2,732.18,732.23,732.3,732.12,732.22,732.11,732.07,732.15,732.13,732.22,731.95,731.81,731.96,732.04,731.89,732.08,732.01,732.26,732.34,732.43,732.66,732.59,732.67,732.58,732.66,732.74,732.71,732.63,732.97,732.96,732.92,732.9,733.01,733.18,733.16,733.12,733.18,733.1,733.1,733.22,733.21,733.15,733.18,733.21,733.16,733.28,733.29,733.51,733.46,733.42,733.44,733.31,733.54,733.67,733.68,733.87,733.81,733.7,733.67,733.3,733.06,733.12,733.16,732.85,732.89,733.04,733.19,733.28,733.12,733.12,733.14,733.0,732.78,732.71,732.79,732.92,732.74,732.8,732.78,732.68,732.56,732.57,732.57,732.62,732.64,732.51,732.69,732.7,732.73,732.47,732.5,732.27,732.13,732.21,732.07,732.22,732.21,731.89,731.96,731.88,732.0,732.01,731.73,731.71,731.81,731.8,732.03],"high":[725.15,725.0,724.58,725.17,726.02,726.84,727.67,728.18,728.09,728.26,728.47,728.61,728.24,728.22,727.75,728.9,729.64,730.04,730.33,730.83,731.05,731.15,731.03,730.68,730.95,730.93,730.9,731.05,731.68,731.67,731.78,731.71,731.79,731.71,731.65,731.91,731.77,731.61,731.55,731.77,732.1,732.42,732.4,732.48,732.39,732.33,732.51,732.33,732.56,732.51,732.09,732.33,732.35,732.52,732.51,732.48,732.47,732.47,732.95,733.04,733.09,733.33,733.59,733.53,733.74,733.75,733.71,733.66,733.5,733.49,733.59,733.52,733.25,733.3,733.23,733.01,733.13,733.12,733.01,732.76,732.73,732.76,732.82,732.69,732.83,732.8,732.37,732.51,732.59,732.53,732.67,732.86,732.9,732.61,732.24,732.6,732.72,732.61,732.52,732.53,732.69,732.83,732.82,732.83,732.84,732.7,732.74,732.77,732.61,732.79,732.95,733.01,733.03,732.98,733.1,733.03,732.72,732.9,732.46,732.06,732.07,732.12,731.79,731.68,731.6,731.35,731.17,730.84,730.86,731.03,731.01,731.12,731.6,731.62,731.43,731.05,730.99,730.87,730.76,730.76,730.8,730.6,730.23,730.41,730.42,730.44,730.54,730.65,730.19,730.15,730.49,730.84,731.17,731.32,731.33,731.4,731.51,731.4,731.48,731.51,731.45,731.5,731.33,731.14,730.92,730.99,730.94,730.85,730.88,730.88,730.98,731.06,731.25,731.29,731.41,731.81,731.81,731.88,731.78,731.84,732.1,732.16,732.07,732.09,732.1,732.03,732.0,731.95,731.89,731.88,731.61,731.65,731.86,731.85,731.85,731.93,731.92,731.95,732.05,732.06,732.11,732.24,732.09,731.93,731.88,731.85,731.82,731.82,731.87,732.0,732.38,732.54,732.53,732.6,732.63,732.76,732.84,732.69,732.92,732.82,732.88,732.95,732.95,732.86,732.85,732.88,732.94,733.0,733.11,733.2,733.35,733.22,733.17,733.18,733.15,733.2,733.17,733.22,733.26,733.21,733.23,733.2,733.14,733.1,733.02,733.04,733.0,732.99,732.86,732.78,732.92,732.87,732.72,732.74,732.69,732.84,732.77,732.69,732.74,732.67,732.71,732.69,732.52,732.48,732.49,732.44,732.44,732.58,732.63,732.59,732.46,732.39,732.45,732.39,732.4,732.55,732.5,732.32,732.18,732.14,732.27,732.24,732.32,732.23,732.27,732.37,732.33,732.25,732.25,732.15,732.17,732.16,732.22,732.22,731.98,732.09,732.06,732.04,732.1,732.08,732.34,732.35,732.44,732.66,732.69,732.69,732.69,732.77,732.76,732.75,732.82,732.99,733.09,732.96,733.0,733.08,733.19,733.23,733.17,733.2,733.2,733.19,733.22,733.27,733.26,733.23,733.3,733.28,733.25,733.31,733.5,733.53,733.53,733.47,733.46,733.48,733.76,733.73,733.89,733.96,733.82,733.71,733.67,733.35,733.14,733.15,733.18,732.92,733.06,733.16,733.31,733.32,733.16,733.19,733.14,733.04,732.81,732.81,732.99,732.94,732.82,732.85,732.86,732.76,732.6,732.77,732.71,732.66,732.7,732.66,732.74,732.73,732.73,732.53,732.54,732.29,732.32,732.25,732.24,732.28,732.21,732.02,732.12,732.0,732.28,732.12,731.78,731.92,731.94,732.12,732.08],"low":[724.43,724.08,724.04,724.4,724.95,725.9,726.81,727.8,727.8,727.83,728.14,727.76,727.56,727.57,727.24,727.47,728.88,729.53,729.87,730.28,730.21,730.72,730.5,730.29,730.28,730.49,730.29,730.76,730.97,731.5,731.1,731.21,731.36,731.33,731.21,731.54,731.46,731.21,731.3,731.49,731.63,731.97,732.24,732.24,732.09,732.13,732.11,732.0,732.14,732.05,731.8,731.91,732.12,732.26,732.28,732.1,732.26,732.24,732.33,732.81,732.83,732.98,733.28,733.3,733.38,733.58,733.47,733.49,733.12,733.26,733.35,733.12,733.04,732.94,733.03,732.59,732.53,732.88,732.58,732.44,732.36,732.4,732.5,732.45,732.53,732.18,732.15,732.26,732.23,732.12,732.05,732.66,732.54,732.08,732.04,732.11,732.4,732.39,732.13,732.18,732.31,732.63,732.44,732.41,732.5,732.46,732.46,732.4,732.21,732.36,732.69,732.69,732.78,732.81,732.92,732.57,732.38,732.13,731.73,731.7,731.7,731.72,731.42,731.41,730.82,730.84,730.58,730.47,730.51,730.75,730.53,730.77,731.17,731.36,731.14,730.69,730.76,730.59,730.6,730.4,730.52,730.14,729.88,730.05,730.17,730.15,730.27,730.19,729.92,729.86,730.11,730.48,730.78,731.01,730.93,730.99,731.24,731.17,731.23,731.24,731.29,731.22,731.09,730.86,730.69,730.74,730.65,730.58,730.67,730.7,730.65,730.85,730.95,731.18,731.26,731.31,731.7,731.65,731.65,731.67,731.79,731.82,731.84,731.86,731.93,731.8,731.84,731.73,731.67,731.4,731.46,731.43,731.52,731.75,731.75,731.75,731.78,731.84,731.93,731.92,731.96,732.06,731.88,731.84,731.76,731.62,731.72,731.71,731.78,731.87,732.0,732.35,732.45,732.41,732.52,732.58,732.6,732.59,732.66,732.66,732.75,732.83,732.83,732.74,732.78,732.78,732.78,732.91,732.9,732.98,733.11,733.07,733.02,733.04,733.06,733.08,733.05,733.1,733.15,733.03,733.01,733.04,733.05,732.9,732.9,732.92,732.93,732.77,732.71,732.67,732.7,732.67,732.57,732.62,732.53,732.52,732.63,732.58,732.62,732.54,732.59,732.47,732.44,732.35,732.31,732.31,732.29,732.28,732.48,732.28,732.29,732.27,732.25,732.27,732.23,732.35,732.2,732.12,732.04,732.05,731.93,732.14,732.13,732.11,732.12,732.21,732.08,732.06,732.1,732.05,731.96,732.04,732.12,731.92,731.76,731.81,731.94,731.84,731.85,731.99,732.01,732.25,732.31,732.42,732.52,732.51,732.55,732.58,732.62,732.61,732.6,732.63,732.91,732.83,732.88,732.89,733.0,733.11,733.08,733.12,733.06,733.08,732.97,733.15,733.15,733.07,733.16,733.15,733.1,733.25,733.23,733.41,733.41,733.35,733.24,733.16,733.53,733.59,733.64,733.73,733.7,733.63,733.3,732.95,732.99,732.89,732.77,732.73,732.87,733.0,733.14,733.08,733.03,733.07,733.0,732.76,732.58,732.64,732.79,732.68,732.46,732.78,732.68,732.61,732.48,732.53,732.51,732.56,732.52,732.51,732.63,732.45,732.47,732.39,732.24,732.11,732.12,732.12,732.05,732.06,731.85,731.75,731.9,731.77,731.94,731.55,731.56,731.65,731.67,731.75,732.03],"close":[724.76,724.24,724.57,724.76,725.96,726.77,727.67,728.04,727.95,728.23,728.41,727.82,728.11,727.58,727.61,728.87,729.62,729.93,730.26,730.64,731.03,730.93,730.72,730.32,730.87,730.52,730.9,731.03,731.63,731.55,731.75,731.35,731.72,731.38,731.61,731.68,731.5,731.45,731.52,731.62,732.09,732.35,732.33,732.3,732.27,732.25,732.27,732.24,732.37,732.08,731.98,732.26,732.32,732.4,732.28,732.39,732.35,732.44,732.9,732.97,733.0,733.33,733.51,733.38,733.68,733.64,733.62,733.51,733.21,733.38,733.51,733.12,733.16,733.2,733.03,732.59,732.98,732.96,732.73,732.58,732.37,732.65,732.72,732.65,732.82,732.3,732.29,732.51,732.55,732.15,732.6,732.79,732.55,732.08,732.08,732.6,732.51,732.51,732.31,732.48,732.68,732.7,732.5,732.77,732.51,732.63,732.53,732.51,732.35,732.79,732.8,732.99,733.0,732.97,732.97,732.57,732.71,732.29,731.86,731.91,731.86,731.72,731.44,731.62,730.84,731.09,730.78,730.82,730.85,731.01,730.66,731.11,731.59,731.38,731.14,730.76,730.86,730.68,730.6,730.71,730.62,730.18,730.14,730.34,730.18,730.32,730.54,730.19,730.04,730.15,730.48,730.83,731.17,731.3,730.96,731.38,731.29,731.24,731.47,731.3,731.33,731.22,731.09,730.96,730.73,730.96,730.65,730.71,730.77,730.85,730.98,731.01,731.25,731.25,731.34,731.77,731.73,731.75,731.74,731.83,732.09,732.0,731.86,732.05,731.94,731.97,731.86,731.81,731.84,731.58,731.5,731.63,731.84,731.84,731.78,731.87,731.86,731.95,732.02,731.98,732.1,732.07,731.9,731.84,731.8,731.82,731.73,731.77,731.87,731.98,732.38,732.48,732.46,732.56,732.61,732.75,732.62,732.66,732.77,732.81,732.88,732.92,732.87,732.82,732.83,732.79,732.94,732.95,733.04,733.2,733.13,733.2,733.11,733.11,733.11,733.13,733.15,733.2,733.22,733.05,733.18,733.08,733.1,732.92,732.97,732.97,732.97,732.77,732.83,732.74,732.92,732.67,732.66,732.66,732.53,732.77,732.66,732.6,732.65,732.6,732.67,732.52,732.46,732.48,732.35,732.38,732.29,732.58,732.6,732.29,732.36,732.34,732.25,732.35,732.32,732.48,732.2,732.15,732.08,732.11,732.2,732.2,732.16,732.21,732.23,732.26,732.12,732.23,732.1,732.05,732.15,732.08,732.2,731.97,731.8,732.01,732.04,731.87,732.06,732.0,732.28,732.33,732.38,732.65,732.59,732.67,732.55,732.65,732.72,732.7,732.63,732.98,732.93,732.91,732.9,733.04,733.19,733.13,733.11,733.19,733.11,733.11,733.22,733.2,733.15,733.15,733.23,733.15,733.25,733.29,733.49,733.48,733.43,733.45,733.31,733.47,733.68,733.66,733.87,733.83,733.71,733.66,733.31,733.05,733.13,733.15,732.86,732.9,733.03,733.16,733.27,733.09,733.12,733.15,733.03,732.77,732.68,732.81,732.93,732.77,732.8,732.78,732.68,732.62,732.56,732.58,732.63,732.63,732.52,732.62,732.69,732.71,732.47,732.48,732.27,732.13,732.22,732.12,732.22,732.21,731.95,731.99,731.91,732.0,732.05,731.72,731.7,731.83,731.84,732.07,732.03],"name":"QQQ","increasing":{"line":{"color":"#26a69a"},"fillcolor":"#26a69a"},"decreasing":{"line":{"color":"#ef5350"},"fillcolor":"#ef5350"},"hoverlabel":{"namelength":-1}},{"type":"scatter","mode":"markers+text","x":["09:46","09:46","09:46","09:46","10:12","10:29","10:29","11:32","12:02","12:25","14:34","14:34","14:34"],"y":[729.62,729.62,729.62,729.62,732.33,732.97,732.97,731.44,731.17,731.77,732.59,732.59,732.59],"marker":{"symbol":["triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up"],"color":["#26a69a","#26a69a","#26a69a","#26a69a","#ef5350","#26a69a","#26a69a","#ef5350","#ef5350","#ef5350","#26a69a","#26a69a","#26a69a"],"size":14,"line":{"color":"#222","width":1}},"text":["#1","#2","#3","#4","#5","#6","#7","#8","#9","#10","#11","#12","#13"],"textposition":"top center","textfont":{"size":10,"color":"#222"},"hovertext":["<b>#1 ENTRY</b><br>QQQ260813C730000.US<br>dir: call<br>入场原因: breakout<br>qty: 2<br>entry ET: 09:46:58<br>option price: 1.65<br>QQQ close: 729.62<br><i>click to pin · copy</i>","<b>#2 ENTRY</b><br>QQQ260813C730000.US<br>dir: call<br>入场原因: breakout<br>qty: 1<br>entry ET: 09:46:58<br>option price: 1.65<br>QQQ close: 729.62<br><i>click to pin · copy</i>","<b>#3 ENTRY</b><br>QQQ260813C730000.US<br>dir: call<br>入场原因: breakout<br>qty: 1<br>entry ET: 09:46:58<br>option price: 1.65<br>QQQ close: 729.62<br><i>click to pin · copy</i>","<b>#4 ENTRY</b><br>QQQ260813C730000.US<br>dir: call<br>入场原因: breakout<br>qty: 1<br>entry ET: 09:46:58<br>option price: 1.65<br>QQQ close: 729.62<br><i>click to pin · copy</i>","<b>#5 ENTRY</b><br>QQQ260813C733000.US<br>dir: call<br>入场原因: breakout<br>qty: 7<br>entry ET: 10:12:02<br>option price: 1.41<br>QQQ close: 732.33<br><i>click to pin · copy</i>","<b>#6 ENTRY</b><br>QQQ260813C734000.US<br>dir: call<br>入场原因: breakout<br>qty: 4<br>entry ET: 10:29:03<br>option price: 1.08<br>QQQ close: 732.97<br><i>click to pin · copy</i>","<b>#7 ENTRY</b><br>QQQ260813C734000.US<br>dir: call<br>入场原因: breakout<br>qty: 5<br>entry ET: 10:29:03<br>option price: 1.08<br>QQQ close: 732.97<br><i>click to pin · copy</i>","<b>#8 ENTRY</b><br>QQQ260813C732000.US<br>dir: call<br>入场原因: reverse_pair<br>qty: 4<br>entry ET: 11:32:50<br>option price: 1.09<br>QQQ close: 731.44<br><i>click to pin · copy</i>","<b>#9 ENTRY</b><br>QQQ260813C732000.US<br>dir: call<br>入场原因: breakout<br>qty: 12<br>entry ET: 12:02:41<br>option price: 0.79<br>QQQ close: 731.17<br><i>click to pin · copy</i>","<b>#10 ENTRY</b><br>QQQ260813C732000.US<br>dir: call<br>入场原因: breakout<br>qty: 4<br>entry ET: 12:25:44<br>option price: 1.00<br>QQQ close: 731.77<br><i>click to pin · copy</i>","<b>#11 ENTRY</b><br>QQQ260813C733000.US<br>dir: call<br>入场原因: breakout<br>qty: 1<br>entry ET: 14:34:03<br>option price: 0.55<br>QQQ close: 732.59<br><i>click to pin · copy</i>","<b>#12 ENTRY</b><br>QQQ260813C733000.US<br>dir: call<br>入场原因: breakout<br>qty: 1<br>entry ET: 14:34:03<br>option price: 0.55<br>QQQ close: 732.59<br><i>click to pin · copy</i>","<b>#13 ENTRY</b><br>QQQ260813C733000.US<br>dir: call<br>入场原因: breakout<br>qty: 1<br>entry ET: 14:34:03<br>option price: 0.55<br>QQQ close: 732.59<br><i>click to pin · copy</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["#1 ENTRY · call","QQQ260813C730000.US call 2 09:46:58 @ 1.65"],["#2 ENTRY · call","QQQ260813C730000.US call 1 09:46:58 @ 1.65"],["#3 ENTRY · call","QQQ260813C730000.US call 1 09:46:58 @ 1.65"],["#4 ENTRY · call","QQQ260813C730000.US call 1 09:46:58 @ 1.65"],["#5 ENTRY · call","QQQ260813C733000.US call 7 10:12:02 @ 1.41"],["#6 ENTRY · call","QQQ260813C734000.US call 4 10:29:03 @ 1.08"],["#7 ENTRY · call","QQQ260813C734000.US call 5 10:29:03 @ 1.08"],["#8 ENTRY · call","QQQ260813C732000.US call 4 11:32:50 @ 1.09"],["#9 ENTRY · call","QQQ260813C732000.US call 12 12:02:41 @ 0.79"],["#10 ENTRY · call","QQQ260813C732000.US call 4 12:25:44 @ 1.00"],["#11 ENTRY · call","QQQ260813C733000.US call 1 14:34:03 @ 0.55"],["#12 ENTRY · call","QQQ260813C733000.US call 1 14:34:03 @ 0.55"],["#13 ENTRY · call","QQQ260813C733000.US call 1 14:34:03 @ 0.55"]],"name":"entry","showlegend":false},{"type":"scatter","mode":"markers+text","x":["09:49","10:00","10:05","10:05","10:16","10:32","10:39","11:34","12:17","12:53","14:42","15:00","15:01"],"y":[730.64,731.75,731.68,731.68,732.27,733.51,733.38,730.84,730.71,731.84,732.93,733.49,733.48],"marker":{"symbol":["star","star","star","star","triangle-down-open","star","circle","x","circle","circle","star","star","star"],"color":["#26a69a","#26a69a","#26a69a","#26a69a","#ef5350","#26a69a","#26a69a","#ef5350","#ef5350","#ef5350","#26a69a","#26a69a","#26a69a"],"size":14,"line":{"color":"#222","width":1}},"text":["#1","#2","#3","#4","#5","#6","#7","#8","#9","#10","#11","#12","#13"],"textposition":"bottom center","textfont":{"size":10,"color":"#222"},"hovertext":["<b>#1 EXIT</b><br>QQQ260813C730000.US<br>reason: trailing_take_profit_tier1<br>exit ET: 09:49:51<br>option price: 2.18<br>QQQ close: 730.64<br>PnL: +106.00 USD<br>max%: 37.6%<br><i>click to pin · copy</i>","<b>#2 EXIT</b><br>QQQ260813C730000.US<br>reason: trailing_take_profit_tier2<br>exit ET: 10:00:02<br>option price: 2.50<br>QQQ close: 731.75<br>PnL: +85.00 USD<br>max%: 68.5%<br><i>click to pin · copy</i>","<b>#3 EXIT</b><br>QQQ260813C730000.US<br>reason: partial_take_profit<br>exit ET: 10:05:33<br>option price: 2.91<br>QQQ close: 731.68<br>PnL: +126.00 USD<br>max%: 75.2%<br><i>click to pin · copy</i>","<b>#4 EXIT</b><br>QQQ260813C730000.US<br>reason: trailing_take_profit_tier3<br>exit ET: 10:05:44<br>option price: 2.80<br>QQQ close: 731.68<br>PnL: +115.00 USD<br>max%: 75.2%<br><i>click to pin · copy</i>","<b>#5 EXIT</b><br>QQQ260813C733000.US<br>reason: confirmed_dud_cut<br>exit ET: 10:16:18<br>option price: 1.25<br>QQQ close: 732.27<br>PnL: -112.00 USD<br>max%: 1.4%<br><i>click to pin · copy</i>","<b>#6 EXIT</b><br>QQQ260813C734000.US<br>reason: trailing_take_profit_tier1<br>exit ET: 10:32:58<br>option price: 1.35<br>QQQ close: 733.51<br>PnL: +108.00 USD<br>max%: 30.6%<br><i>click to pin · copy</i>","<b>#7 EXIT</b><br>QQQ260813C734000.US<br>reason: trend_stop<br>exit ET: 10:39:00<br>option price: 1.22<br>QQQ close: 733.38<br>PnL: +70.00 USD<br>max%: 37.0%<br><i>click to pin · copy</i>","<b>#8 EXIT</b><br>QQQ260813C732000.US<br>reason: reverse_skip_score_cut<br>exit ET: 11:34:42<br>option price: 0.94<br>QQQ close: 730.84<br>PnL: -60.00 USD<br>max%: 6.4%<br><i>click to pin · copy</i>","<b>#9 EXIT</b><br>QQQ260813C732000.US<br>reason: trend_stop<br>exit ET: 12:17:03<br>option price: 0.60<br>QQQ close: 730.71<br>PnL: -228.00 USD<br>max%: 25.3%<br><i>click to pin · copy</i>","<b>#10 EXIT</b><br>QQQ260813C732000.US<br>reason: trend_stop<br>exit ET: 12:53:01<br>option price: 0.88<br>QQQ close: 731.84<br>PnL: -48.00 USD<br>max%: 13.0%<br><i>click to pin · copy</i>","<b>#11 EXIT</b><br>QQQ260813C733000.US<br>reason: trailing_take_profit_tier1<br>exit ET: 14:42:16<br>option price: 0.72<br>QQQ close: 732.93<br>PnL: +17.00 USD<br>max%: 34.5%<br><i>click to pin · copy</i>","<b>#12 EXIT</b><br>QQQ260813C733000.US<br>reason: partial_take_profit<br>exit ET: 15:00:58<br>option price: 0.98<br>QQQ close: 733.49<br>PnL: +43.00 USD<br>max%: 76.4%<br><i>click to pin · copy</i>","<b>#13 EXIT</b><br>QQQ260813C733000.US<br>reason: trailing_take_profit_tier3<br>exit ET: 15:01:02<br>option price: 0.97<br>QQQ close: 733.48<br>PnL: +42.00 USD<br>max%: 76.4%<br><i>click to pin · copy</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["#1 EXIT · PnL +106.00 · trailing_take_profit_tier1","QQQ260813C730000.US call 2 09:49:51 @ 2.18"],["#2 EXIT · PnL +85.00 · trailing_take_profit_tier2","QQQ260813C730000.US call 1 10:00:02 @ 2.50"],["#3 EXIT · PnL +126.00 · partial_take_profit","QQQ260813C730000.US call 1 10:05:33 @ 2.91"],["#4 EXIT · PnL +115.00 · trailing_take_profit_tier3","QQQ260813C730000.US call 1 10:05:44 @ 2.80"],["#5 EXIT · PnL -112.00 · confirmed_dud_cut","QQQ260813C733000.US call 7 10:16:18 @ 1.25"],["#6 EXIT · PnL +108.00 · trailing_take_profit_tier1","QQQ260813C734000.US call 4 10:32:58 @ 1.35"],["#7 EXIT · PnL +70.00 · trend_stop","QQQ260813C734000.US call 5 10:39:00 @ 1.22"],["#8 EXIT · PnL -60.00 · reverse_skip_score_cut","QQQ260813C732000.US call 4 11:34:42 @ 0.94"],["#9 EXIT · PnL -228.00 · trend_stop","QQQ260813C732000.US call 12 12:17:03 @ 0.60"],["#10 EXIT · PnL -48.00 · trend_stop","QQQ260813C732000.US call 4 12:53:01 @ 0.88"],["#11 EXIT · PnL +17.00 · trailing_take_profit_tier1","QQQ260813C733000.US call 1 14:42:16 @ 0.72"],["#12 EXIT · PnL +43.00 · partial_take_profit","QQQ260813C733000.US call 1 15:00:58 @ 0.98"],["#13 EXIT · PnL +42.00 · trailing_take_profit_tier3","QQQ260813C733000.US call 1 15:01:02 @ 0.97"]],"name":"exit","showlegend":false},{"type":"scatter","mode":"markers","x":["09:46","10:11","10:28","12:02","12:25","14:33"],"y":[729.62,732.35,732.9,731.17,731.77,732.65],"marker":{"symbol":["triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up"],"color":"rgba(38,166,154,0.85)","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:46:47 · call<br>结果: ✓ 通过（已提交）<br><i>点击可复制</i>","信号 10:11:55 · call<br>结果: ✓ 通过（已提交）<br><i>点击可复制</i>","信号 10:28:56 · call<br>结果: ✓ 通过（已提交）<br><i>点击可复制</i>","信号 12:02:35 · call<br>结果: ✓ 通过（已提交）<br><i>点击可复制</i>","信号 12:25:37 · call<br>结果: ✓ 通过（已提交）<br><i>点击可复制</i>","信号 14:33:56 · call<br>结果: ✓ 通过（已提交）<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:46:47 · call","信号 09:46:47 · call · ✓ 通过"],["信号 10:11:55 · call","信号 10:11:55 · call · ✓ 通过"],["信号 10:28:56 · call","信号 10:28:56 · call · ✓ 通过"],["信号 12:02:35 · call","信号 12:02:35 · call · ✓ 通过"],["信号 12:25:37 · call","信号 12:25:37 · call · ✓ 通过"],["信号 14:33:56 · call","信号 14:33:56 · call · ✓ 通过"]],"name":"✓ 通过 (6)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["09:45","09:46","10:20","10:49","11:22","11:27","11:28","11:58","12:01","12:02","14:07"],"y":[728.87,729.62,731.98,732.58,733.0,732.29,731.86,730.04,730.83,731.17,732.15],"marker":{"symbol":["triangle-up","triangle-up","triangle-down","triangle-down","triangle-up","triangle-down","triangle-down","triangle-down","triangle-up","triangle-up","triangle-down"],"color":"#e67e22","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:45:41 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 09:46:01 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:20:19 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:49:32 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:22:02 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:27:49 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:28:00 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:58:47 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 12:01:38 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 12:02:00 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 14:07:03 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:45:41 · call","信号 09:45:41 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 09:46:01 · call","信号 09:46:01 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:20:19 · put","信号 10:20:19 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:49:32 · put","信号 10:49:32 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:22:02 · call","信号 11:22:02 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:27:49 · put","信号 11:27:49 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:28:00 · put","信号 11:28:00 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:58:47 · put","信号 11:58:47 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 12:01:38 · call","信号 12:01:38 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 12:02:00 · call","信号 12:02:00 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 14:07:03 · put","信号 14:07:03 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"]],"name":"✗ Quality Filter (11)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["09:36","14:30","14:31"],"y":[727.67,732.28,732.33],"marker":{"symbol":["triangle-up","triangle-up","triangle-up"],"color":"#3498db","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:36:52 · call<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: insufficient_bars<br><i>点击可复制</i>","信号 14:30:47 · call<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: counter_trend_bear_call<br><i>点击可复制</i>","信号 14:31:00 · call<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: counter_trend_bear_call<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:36:52 · call","信号 09:36:52 · call · ✗ 被拦截 · Regime Filter · insufficient_bars"],["信号 14:30:47 · call","信号 14:30:47 · call · ✗ 被拦截 · Regime Filter · counter_trend_bear_call"],["信号 14:31:00 · call","信号 14:31:00 · call · ✗ 被拦截 · Regime Filter · counter_trend_bear_call"]],"name":"✗ Regime Filter (3)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["11:36"],"y":[730.78],"marker":{"symbol":["triangle-down"],"color":"#e74c3c","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 11:36:30 · put<br>结果: ✗ 被拦截<br>关卡: Entry Filter (chase)<br>未满足: chasing_exhausted<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 11:36:30 · put","信号 11:36:30 · put · ✗ 被拦截 · Entry Filter (chase) · chasing_exhausted"]],"name":"✗ Entry Filter (chase) (1)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["10:45","11:28","11:32","11:34","11:52","13:00","13:38"],"y":[732.59,731.86,731.44,730.84,730.14,732.38,732.83],"marker":{"symbol":["triangle-down","triangle-down","triangle-down","triangle-down","triangle-down","triangle-up","triangle-down"],"color":"#34495e","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 10:45:52 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 11:28:51 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 11:32:42 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 11:34:45 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 11:52:41 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 13:00:35 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 13:38:01 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 10:45:52 · put","信号 10:45:52 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 11:28:51 · put","信号 11:28:51 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 11:32:42 · put","信号 11:32:42 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 11:34:45 · put","信号 11:34:45 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 11:52:41 · put","信号 11:52:41 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 13:00:35 · call","信号 13:00:35 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 13:38:01 · put","信号 13:38:01 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"]],"name":"✗ Skip Score (7)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["09:46","09:48","09:57","09:58","10:31","12:01","12:24","14:41"],"y":[729.62,730.26,731.03,731.63,733.33,730.83,731.34,732.98],"marker":{"symbol":["triangle-up-open","triangle-up-open","triangle-up-open","triangle-up-open","triangle-up-open","triangle-up-open","triangle-up-open","triangle-up-open"],"color":"rgba(38,166,154,0.85)","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:46:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 09:48:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 09:57:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 09:58:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 10:31:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 12:01:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 12:24:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>","信号 14:41:00 · call · 同向<br>结果: ◇ 持仓中·满足未开仓<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:46:00 · call","信号 09:46:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 09:48:00 · call","信号 09:48:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 09:57:00 · call","信号 09:57:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 09:58:00 · call","信号 09:58:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 10:31:00 · call","信号 10:31:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 12:01:00 · call","信号 12:01:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 12:24:00 · call","信号 12:24:00 · call · 同向 · ◇ 持仓中·满足未开仓"],["信号 14:41:00 · call","信号 14:41:00 · call · 同向 · ◇ 持仓中·满足未开仓"]],"name":"持仓·满足未开 (8)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["09:47","09:49","12:38","12:39","14:40"],"y":[729.93,730.64,731.84,731.58,732.63],"marker":{"symbol":["triangle-up-open","triangle-up-open","triangle-down-open","triangle-down-open","triangle-up-open"],"color":"#e67e22","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:47:00 · call · 同向<br>结果: ◇ 持仓中·被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 09:49:00 · call · 同向<br>结果: ◇ 持仓中·被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 12:38:00 · put · 反向<br>结果: ◇ 持仓中·被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 12:39:00 · put · 反向<br>结果: ◇ 持仓中·被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 14:40:00 · call · 同向<br>结果: ◇ 持仓中·被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:47:00 · call","信号 09:47:00 · call · 同向 · ◇ 持仓中·被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 09:49:00 · call","信号 09:49:00 · call · 同向 · ◇ 持仓中·被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 12:38:00 · put","信号 12:38:00 · put · 反向 · ◇ 持仓中·被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 12:39:00 · put","信号 12:39:00 · put · 反向 · ◇ 持仓中·被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 14:40:00 · call","信号 14:40:00 · call · 同向 · ◇ 持仓中·被拦截 · Quality Filter · gap_atr14_below_threshold"]],"name":"持仓·✗ Quality Filter (5)","visible":"legendonly","showlegend":true}],"layout":{"xaxis":{"type":"category","tickangle":-45,"nticks":30,"rangeslider":{"visible":false},"title":"ET time"},"yaxis":{"title":"QQQ price","fixedrange":false},"shapes":[{"type":"line","xref":"x","yref":"y","x0":"09:46","y0":729.62,"x1":"09:49","y1":730.64,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"09:46","y0":729.62,"x1":"10:00","y1":731.75,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"09:46","y0":729.62,"x1":"10:05","y1":731.68,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"09:46","y0":729.62,"x1":"10:05","y1":731.68,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:12","y0":732.33,"x1":"10:16","y1":732.27,"line":{"color":"rgba(239,83,80,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:29","y0":732.97,"x1":"10:32","y1":733.51,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"10:29","y0":732.97,"x1":"10:39","y1":733.38,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"11:32","y0":731.44,"x1":"11:34","y1":730.84,"line":{"color":"rgba(239,83,80,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"12:02","y0":731.17,"x1":"12:17","y1":730.71,"line":{"color":"rgba(239,83,80,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"12:25","y0":731.77,"x1":"12:53","y1":731.84,"line":{"color":"rgba(239,83,80,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"14:34","y0":732.59,"x1":"14:42","y1":732.93,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"14:34","y0":732.59,"x1":"15:00","y1":733.49,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"},{"type":"line","xref":"x","yref":"y","x0":"14:34","y0":732.59,"x1":"15:01","y1":733.48,"line":{"color":"rgba(38,166,154,0.35)","width":1.5,"dash":"dot"},"layer":"above"}],"dragmode":"pan","margin":{"l":50,"r":30,"t":20,"b":60},"plot_bgcolor":"#ffffff","paper_bgcolor":"#fafafa","showlegend":true,"legend":{"orientation":"h","x":0,"y":1.08,"xanchor":"left","yanchor":"bottom"}}};
+// When loaded inside an iframe (daily page embed) tag the body so we can
+// hide the redundant trade table below.
+try { if (window.parent !== window.self) document.body.classList.add('embedded'); } catch (e) {}
+const chartDiv = document.getElementById('chart');
+Plotly.newPlot(chartDiv, FIG.data, FIG.layout, {
+    responsive: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d']
+});
+window.addEventListener('resize', () => Plotly.Plots.resize(chartDiv));
+
+// --- Pinned copy card -----------------------------------------------------
+//
+// Plotly's hover tooltip is non-interactive, so we hook plotly_click on
+// the entry / exit / signal traces and pop a sticky card that hosts a real
+// Copy button. customdata on each marker is `[title, copyText]`; we never
+// touch the click event for any other trace (e.g. candlestick body).
+(() => {
+  const card = document.getElementById('qt-copy-card');
+  if (!card) return;
+  const titleEl = card.querySelector('[data-qt-card-title]');
+  const textEl = card.querySelector('[data-qt-card-text]');
+  const copyBtn = card.querySelector('[data-qt-card-copy]');
+  const closeBtn = card.querySelector('[data-qt-card-close]');
+  let copyResetTimer = null;
+
+  function show(clientX, clientY, title, text) {
+    titleEl.textContent = title;
+    textEl.textContent = text;
+    card.dataset.copyText = text;
+    // Pre-render hidden so we can measure
+    card.style.left = '0px';
+    card.style.top = '0px';
+    card.hidden = false;
+    const rect = card.getBoundingClientRect();
+    const margin = 8;
+    let x = clientX + 12;
+    let y = clientY + 12;
+    if (x + rect.width + margin > window.innerWidth) x = clientX - rect.width - 12;
+    if (y + rect.height + margin > window.innerHeight) y = clientY - rect.height - 12;
+    card.style.left = Math.max(margin, x) + 'px';
+    card.style.top = Math.max(margin, y) + 'px';
+    copyBtn.classList.remove('copied');
+    copyBtn.textContent = '复制';
+  }
+  function hide() {
+    card.hidden = true;
+    if (copyResetTimer) { clearTimeout(copyResetTimer); copyResetTimer = null; }
+  }
+
+  chartDiv.on('plotly_click', (ev) => {
+    const pt = ev && ev.points && ev.points[0];
+    if (!pt) return;
+    const cd = pt.customdata;
+    if (!Array.isArray(cd) || cd.length < 2) return;
+    const orig = ev.event || {};
+    show(orig.clientX || 0, orig.clientY || 0, String(cd[0]), String(cd[1]));
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const text = card.dataset.copyText || '';
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      // Fallback for older browsers / iframe sandboxing.
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-1000px';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        ta.remove();
+      } catch (e2) { ok = false; }
+    }
+    copyBtn.textContent = ok ? '已复制 ✓' : '复制失败';
+    copyBtn.classList.toggle('copied', ok);
+    if (copyResetTimer) clearTimeout(copyResetTimer);
+    copyResetTimer = setTimeout(() => {
+      copyBtn.textContent = '复制';
+      copyBtn.classList.remove('copied');
+    }, 1400);
+  });
+
+  closeBtn.addEventListener('click', hide);
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') hide(); });
+  // Click-outside to dismiss, but ignore clicks landing back on the
+  // chart (that re-opens the card via plotly_click anyway).
+  document.addEventListener('click', (ev) => {
+    if (card.hidden) return;
+    if (card.contains(ev.target)) return;
+    if (chartDiv.contains(ev.target)) return;
+    hide();
+  });
+})();
+</script>
+</body>
+</html>
