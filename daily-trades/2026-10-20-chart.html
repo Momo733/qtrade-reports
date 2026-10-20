@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<!-- chart_schema=9 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2026-10-20 — Daily Chart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --win:  #1f9d76;
+    --loss: #d23f3f;
+    --neutral: #6b7280;
+    --grid: #e5e7eb;
+    --bg:   #fafbfc;
+    --card: #ffffff;
+    --ink-1: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #6b7280;
+    --accent: #2563eb;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+  }
+  body {
+    padding: 18px 22px 28px;
+    box-sizing: border-box;
+  }
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px 16px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .page-head h1 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink-1);
+  }
+  .page-head .meta {
+    color: var(--ink-2);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-bottom: 10px;
+  }
+  .legend strong { color: var(--ink-1); margin-right: 6px; }
+  .legend .win  { color: var(--win);  font-weight: 600; }
+  .legend .loss { color: var(--loss); font-weight: 600; }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  #chart {
+    width: 100%;
+    height: calc(100vh - 240px);
+    min-height: 560px;
+  }
+
+  /* trade table — clean, dense, easy to scan */
+  table.trades {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 22px;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.trades caption {
+    text-align: left;
+    padding: 12px 14px 8px;
+    font-weight: 600;
+    color: var(--ink-1);
+    background: var(--card);
+    caption-side: top;
+  }
+  table.trades th, table.trades td {
+    padding: 7px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--grid);
+  }
+  table.trades th {
+    background: #f6f8fa;
+    color: var(--ink-2);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--grid);
+    position: sticky;
+    top: 0;
+  }
+  table.trades th:first-child, table.trades td:first-child { text-align: center; width: 38px; color: var(--ink-3); }
+  table.trades th:nth-child(2), table.trades td:nth-child(2) { text-align: left; font-family: monospace; font-size: 11.5px; }
+  table.trades th:last-child, table.trades td:last-child { text-align: left; }
+  table.trades tbody tr:last-child td { border-bottom: 0; }
+  table.trades tbody tr:hover td { background: #f6f8fa; }
+  table.trades td.dir-call { color: var(--win);  font-weight: 600; }
+  table.trades td.dir-put  { color: var(--loss); font-weight: 600; }
+  table.trades tr.win  td.pnl { color: var(--win);  font-weight: 600; }
+  table.trades tr.loss td.pnl { color: var(--loss); font-weight: 600; }
+
+  /* When embedded in an iframe inside the daily page the table is
+     redundant with the markdown table below it; hide it there. */
+  body.embedded table.trades { display: none; }
+
+  /* Pinned copy card — shows on click of an entry/exit marker. The
+     Plotly default hover popup is non-interactive (mouse-out kills
+     it), so we replicate the data into a click-pinned overlay that
+     hosts a real Copy button. */
+  #qt-copy-card {
+    position: fixed;
+    z-index: 1000;
+    width: 320px;
+    background: var(--card);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    padding: 10px 12px 12px;
+    font-size: 13px;
+    color: var(--ink-1);
+  }
+  #qt-copy-card[hidden] { display: none; }
+  #qt-copy-card .qt-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  #qt-copy-card .qt-card-title {
+    font-weight: 600;
+    color: var(--ink-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #qt-copy-card pre {
+    margin: 4px 0 10px;
+    padding: 8px 10px;
+    background: #f6f8fa;
+    border: 1px solid var(--grid);
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--ink-1);
+  }
+  #qt-copy-card button {
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--grid);
+    background: var(--card);
+    font-size: 12px;
+    padding: 5px 12px;
+    color: var(--ink-1);
+    font-family: inherit;
+  }
+  #qt-copy-card button.qt-card-copy {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 600;
+    width: 100%;
+  }
+  #qt-copy-card button.qt-card-copy:hover { filter: brightness(1.05); }
+  #qt-copy-card button.qt-card-copy.copied { background: var(--win); border-color: var(--win); }
+  #qt-copy-card button.qt-card-close {
+    background: transparent;
+    border: none;
+    color: var(--ink-3);
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  #qt-copy-card button.qt-card-close:hover { color: var(--ink-1); }
+</style>
+<script src="/qtrade-reports/assets/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<div class="page-head">
+  <h1>2026-10-20 <span style="color:var(--ink-3); font-weight:400;">· QQQ 1-min</span></h1>
+  <div class="meta">open 714.90 · close 717.63 · high 722.75 · low 710.39 · 391 bars · 0 trades · 50 signals</div>
+</div>
+<div class="legend">
+  <strong>Entry</strong>
+  <span>▲ call</span><span>▼ put</span>
+  <span class="win">● win</span><span class="loss">● loss</span>
+  <strong style="margin-left:8px;">Exit</strong>
+  <span>✕ stop_loss</span>
+  <span>★ trailing / partial</span>
+  <span>● trend_stop</span>
+  <span>◆ timeout</span>
+  <span>⬢ climax</span>
+  <strong style="margin-left:8px;">持仓期信号</strong>
+  <span>◇ 空心=持仓中观察（满足未开 / 被拦）· 见图例切换</span>
+</div>
+<div class="chart-card"><div id="chart"></div></div>
+
+<div id="qt-copy-card" hidden role="dialog" aria-label="Trade info">
+  <div class="qt-card-head">
+    <span class="qt-card-title" data-qt-card-title></span>
+    <button type="button" class="qt-card-close" data-qt-card-close aria-label="Close">×</button>
+  </div>
+  <pre data-qt-card-text></pre>
+  <button type="button" class="qt-card-copy" data-qt-card-copy>复制</button>
+</div>
+<script>
+const FIG = {"data":[{"type":"candlestick","x":["09:30","09:31","09:32","09:33","09:34","09:35","09:36","09:37","09:38","09:39","09:40","09:41","09:42","09:43","09:44","09:45","09:46","09:47","09:48","09:49","09:50","09:51","09:52","09:53","09:54","09:55","09:56","09:57","09:58","09:59","10:00","10:01","10:02","10:03","10:04","10:05","10:06","10:07","10:08","10:09","10:10","10:11","10:12","10:13","10:14","10:15","10:16","10:17","10:18","10:19","10:20","10:21","10:22","10:23","10:24","10:25","10:26","10:27","10:28","10:29","10:30","10:31","10:32","10:33","10:34","10:35","10:36","10:37","10:38","10:39","10:40","10:41","10:42","10:43","10:44","10:45","10:46","10:47","10:48","10:49","10:50","10:51","10:52","10:53","10:54","10:55","10:56","10:57","10:58","10:59","11:00","11:01","11:02","11:03","11:04","11:05","11:06","11:07","11:08","11:09","11:10","11:11","11:12","11:13","11:14","11:15","11:16","11:17","11:18","11:19","11:20","11:21","11:22","11:23","11:24","11:25","11:26","11:27","11:28","11:29","11:30","11:31","11:32","11:33","11:34","11:35","11:36","11:37","11:38","11:39","11:40","11:41","11:42","11:43","11:44","11:45","11:46","11:47","11:48","11:49","11:50","11:51","11:52","11:53","11:54","11:55","11:56","11:57","11:58","11:59","12:00","12:01","12:02","12:03","12:04","12:05","12:06","12:07","12:08","12:09","12:10","12:11","12:12","12:13","12:14","12:15","12:16","12:17","12:18","12:19","12:20","12:21","12:22","12:23","12:24","12:25","12:26","12:27","12:28","12:29","12:30","12:31","12:32","12:33","12:34","12:35","12:36","12:37","12:38","12:39","12:40","12:41","12:42","12:43","12:44","12:45","12:46","12:47","12:48","12:49","12:50","12:51","12:52","12:53","12:54","12:55","12:56","12:57","12:58","12:59","13:00","13:01","13:02","13:03","13:04","13:05","13:06","13:07","13:08","13:09","13:10","13:11","13:12","13:13","13:14","13:15","13:16","13:17","13:18","13:19","13:20","13:21","13:22","13:23","13:24","13:25","13:26","13:27","13:28","13:29","13:30","13:31","13:32","13:33","13:34","13:35","13:36","13:37","13:38","13:39","13:40","13:41","13:42","13:43","13:44","13:45","13:46","13:47","13:48","13:49","13:50","13:51","13:52","13:53","13:54","13:55","13:56","13:57","13:58","13:59","14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15","14:16","14:17","14:18","14:19","14:20","14:21","14:22","14:23","14:24","14:25","14:26","14:27","14:28","14:29","14:30","14:31","14:32","14:33","14:34","14:35","14:36","14:37","14:38","14:39","14:40","14:41","14:42","14:43","14:44","14:45","14:46","14:47","14:48","14:49","14:50","14:51","14:52","14:53","14:54","14:55","14:56","14:57","14:58","14:59","15:00","15:01","15:02","15:03","15:04","15:05","15:06","15:07","15:08","15:09","15:10","15:11","15:12","15:13","15:14","15:15","15:16","15:17","15:18","15:19","15:20","15:21","15:22","15:23","15:24","15:25","15:26","15:27","15:28","15:29","15:30","15:31","15:32","15:33","15:34","15:35","15:36","15:37","15:38","15:39","15:40","15:41","15:42","15:43","15:44","15:45","15:46","15:47","15:48","15:49","15:50","15:51","15:52","15:53","15:54","15:55","15:56","15:57","15:58","15:59","16:00"],"open":[714.9,714.78,713.72,713.76,713.23,713.74,713.34,714.09,714.52,713.56,712.92,711.85,711.32,710.98,711.08,710.68,711.54,711.89,712.26,712.97,713.59,712.63,713.05,713.25,714.01,713.61,714.16,714.77,714.82,715.8,716.04,716.34,716.86,716.78,716.36,716.54,717.05,717.58,717.97,718.34,718.23,718.24,718.15,717.83,718.28,718.64,719.13,718.73,719.73,719.6,719.5,719.41,719.46,719.56,719.56,720.0,720.03,720.14,721.43,722.14,722.07,722.23,722.06,721.66,721.0,721.04,721.16,720.83,721.21,721.21,721.28,721.48,721.69,721.64,721.33,721.54,721.7,721.62,721.18,721.28,721.08,721.18,721.42,721.48,721.58,721.88,721.88,722.08,722.43,722.37,721.95,721.83,721.98,721.3,721.43,721.42,721.74,721.55,721.54,721.69,721.47,721.14,720.89,719.02,718.0,718.92,719.29,719.67,719.85,719.94,719.86,719.7,719.33,719.09,718.92,719.36,719.54,719.37,719.28,719.08,719.03,718.86,718.46,718.25,718.12,718.55,718.28,718.6,718.3,717.95,718.08,718.78,719.2,719.47,719.24,719.15,718.63,718.85,719.12,719.19,719.03,719.03,718.91,718.9,719.22,719.93,719.95,719.46,719.56,719.97,719.96,719.94,719.76,719.22,719.2,719.24,719.36,719.78,719.8,719.68,719.31,719.18,718.76,719.09,719.05,719.13,719.15,718.65,718.34,718.15,718.04,718.28,718.55,718.53,718.19,718.43,718.47,718.47,719.13,719.23,719.11,719.14,719.33,719.03,719.36,719.33,719.63,719.78,719.94,719.81,719.5,719.62,719.58,719.53,719.4,719.21,719.03,718.75,719.17,719.29,719.11,718.94,718.87,718.58,717.81,718.01,718.16,718.15,718.13,718.22,718.16,718.32,717.83,718.01,718.34,718.17,718.32,718.24,718.25,718.04,718.21,718.16,718.57,718.5,718.33,718.35,718.7,718.54,718.54,718.58,718.65,718.95,719.35,719.26,719.36,719.08,719.22,719.5,719.29,719.2,719.36,719.64,719.61,719.57,719.21,719.16,719.21,719.34,719.24,719.19,719.29,719.34,719.46,719.46,719.33,719.17,719.33,719.3,719.27,719.24,719.41,719.45,719.43,719.51,719.88,719.9,719.64,719.32,719.52,719.49,719.48,719.62,719.57,719.16,719.28,719.15,719.3,719.21,719.36,719.55,719.48,719.48,719.44,719.44,719.56,719.61,719.44,719.48,719.51,719.51,719.19,719.23,719.17,719.2,719.02,718.89,718.72,718.88,718.94,719.03,719.01,718.97,718.77,718.47,718.34,718.21,718.12,718.0,718.05,718.1,718.18,718.34,718.13,717.34,717.44,717.25,717.77,718.02,718.4,718.18,718.15,718.05,718.19,718.19,718.18,718.49,718.7,718.51,718.47,718.52,718.33,718.58,718.59,718.58,718.42,718.32,718.42,718.46,718.58,718.33,718.36,718.36,718.33,718.19,718.15,717.97,718.04,718.03,718.05,717.95,717.95,717.53,717.08,717.19,717.01,717.21,717.38,717.53,717.16,717.33,717.09,717.33,717.98,717.7,717.88,717.81,717.74,717.13,717.16,716.88,717.08,717.33,717.67,717.38,717.46,717.62,717.64,717.78,717.52,717.51,717.55,717.22,717.59,717.56,717.33,717.58,717.09,717.14,717.14,717.05,717.56],"high":[714.94,715.28,714.27,713.91,714.1,713.74,714.15,714.62,714.58,713.75,713.1,712.18,711.53,711.6,711.46,711.58,711.85,712.23,712.83,713.76,713.6,713.2,713.8,714.27,714.29,714.41,714.89,714.99,715.89,716.18,716.35,716.99,716.96,716.78,716.7,717.1,717.71,718.11,718.57,718.51,718.69,718.26,718.33,718.45,718.78,719.24,719.28,719.74,719.75,719.76,719.8,719.61,719.93,719.74,720.16,720.44,720.17,721.5,722.16,722.25,722.75,722.34,722.21,721.72,721.24,721.51,721.21,721.22,721.58,721.27,721.49,721.93,721.96,721.69,721.7,721.92,722.06,721.71,721.56,721.28,721.3,721.54,721.79,721.7,721.97,722.05,722.35,722.6,722.47,722.45,721.98,722.11,721.98,721.81,721.62,721.66,721.75,721.67,721.75,721.78,721.52,721.17,721.11,719.02,718.87,719.42,719.86,720.31,720.29,720.06,719.87,719.93,719.5,719.46,719.47,719.59,719.54,719.37,719.29,719.26,719.25,718.87,718.85,718.46,718.57,718.76,718.64,718.63,718.35,718.14,718.89,719.23,719.6,719.7,719.37,719.15,719.0,719.11,719.49,719.27,719.19,719.03,719.1,719.34,719.95,720.1,720.05,719.83,720.08,720.09,720.18,720.0,719.83,719.45,719.25,719.4,719.79,719.94,719.88,719.69,719.33,719.22,719.03,719.14,719.2,719.26,719.2,718.88,718.49,718.28,718.38,718.48,718.73,718.53,718.49,718.68,718.8,719.32,719.22,719.35,719.2,719.44,719.54,719.37,719.38,719.7,719.89,720.02,719.95,719.81,719.59,719.7,719.76,719.54,719.4,719.3,719.04,719.12,719.34,719.4,719.13,719.0,718.89,718.59,717.93,718.5,718.19,718.24,718.2,718.3,718.54,718.34,718.06,718.34,718.35,718.33,718.37,718.37,718.36,718.25,718.21,718.58,718.62,718.5,718.39,718.68,718.74,718.9,718.59,718.7,718.99,719.32,719.56,719.39,719.39,719.29,719.42,719.53,719.34,719.45,719.67,719.64,719.62,719.6,719.21,719.27,719.31,719.44,719.39,719.32,719.38,719.53,719.47,719.46,719.33,719.3,719.51,719.38,719.34,719.37,719.51,719.57,719.54,719.88,719.97,719.91,719.68,719.55,719.54,719.49,719.76,719.72,719.59,719.38,719.49,719.25,719.38,719.46,719.6,719.66,719.62,719.62,719.51,719.52,719.68,719.66,719.56,719.64,719.63,719.51,719.28,719.23,719.25,719.21,719.16,718.96,718.94,718.98,719.01,719.05,719.06,718.97,718.85,718.49,718.37,718.22,718.25,718.12,718.16,718.2,718.4,718.35,718.13,717.48,717.55,717.81,718.03,718.45,718.43,718.22,718.15,718.26,718.31,718.24,718.5,718.88,718.7,718.51,718.57,718.52,718.73,718.63,718.66,718.61,718.42,718.48,718.49,718.58,718.58,718.45,718.38,718.36,718.35,718.27,718.17,718.1,718.12,718.14,718.12,718.02,717.98,717.58,717.32,717.27,717.27,717.48,717.57,717.62,717.46,717.33,717.15,717.92,718.0,717.98,717.93,717.81,717.76,717.19,717.16,717.02,717.35,717.72,717.67,717.53,717.87,717.84,717.77,717.78,717.71,717.64,717.55,717.57,717.7,717.56,717.6,717.62,717.34,717.29,717.18,717.63,717.63],"low":[714.36,713.82,713.39,713.01,713.23,712.91,713.17,713.91,713.61,713.0,711.81,711.06,710.75,710.97,710.82,710.39,711.24,711.8,712.0,712.84,712.6,712.57,712.98,713.14,713.68,713.45,714.16,714.55,714.79,715.65,715.49,715.97,716.51,716.37,716.27,716.3,717.04,717.57,717.96,718.03,718.05,717.89,717.68,717.64,718.26,718.56,718.77,718.6,719.35,719.48,719.35,719.32,719.42,719.48,719.34,719.94,719.76,720.05,721.43,721.76,722.01,721.87,721.67,720.8,720.81,720.83,720.58,720.75,720.93,721.04,721.0,721.48,721.5,721.27,721.2,721.29,721.6,721.02,721.1,720.86,721.08,720.81,721.42,721.39,721.54,721.8,721.77,722.08,722.28,722.0,721.68,721.69,721.38,721.23,721.29,721.27,721.43,721.38,721.43,721.42,721.09,720.66,718.96,718.06,717.61,718.47,719.11,719.51,719.68,719.66,719.45,719.34,719.01,718.87,718.84,719.33,719.11,719.08,719.0,719.02,718.77,718.38,718.24,718.02,718.02,718.24,718.28,718.01,717.88,717.89,718.08,718.6,719.11,719.21,719.11,718.43,718.63,718.62,719.04,719.09,718.82,718.71,718.89,718.82,719.18,719.83,719.34,719.46,719.56,719.92,719.79,719.57,719.27,719.1,719.16,719.14,719.36,719.7,719.44,719.27,719.15,718.67,718.76,718.82,718.9,719.05,718.98,718.25,718.06,717.96,717.88,718.15,718.45,718.08,718.19,718.12,718.24,718.46,719.04,719.03,718.86,719.14,718.92,719.03,719.1,719.27,719.57,719.78,719.79,719.46,719.28,719.49,719.49,719.32,718.81,718.92,718.63,718.75,719.17,719.12,718.8,718.86,718.49,717.89,717.62,718.01,718.02,717.99,717.94,717.98,718.11,717.74,717.83,718.01,718.15,718.1,718.12,718.23,717.95,718.04,717.92,718.15,718.49,718.3,718.12,718.35,718.47,718.54,718.38,718.58,718.63,718.9,719.25,719.19,719.11,719.08,719.21,719.27,719.22,719.14,719.33,719.44,719.53,719.24,718.99,719.16,719.2,719.23,719.21,719.13,719.16,719.25,719.37,719.29,719.09,719.16,719.27,719.15,719.2,719.14,719.36,719.41,719.42,719.48,719.77,719.67,719.38,719.26,719.46,719.36,719.48,719.54,719.19,719.16,719.14,719.09,719.21,719.18,719.35,719.47,719.48,719.44,719.37,719.21,719.48,719.49,719.43,719.46,719.45,719.16,719.15,719.05,719.11,719.02,718.89,718.64,718.63,718.83,718.83,718.94,718.9,718.69,718.46,718.27,718.22,717.98,718.02,717.95,717.82,718.0,718.1,717.97,717.42,717.23,717.31,717.2,717.77,717.96,718.03,718.0,718.06,718.03,718.17,718.12,718.08,718.48,718.53,718.25,718.45,718.3,718.3,718.52,718.55,718.45,718.23,718.32,718.38,718.42,718.3,718.32,718.24,718.16,718.2,718.1,717.95,717.92,717.97,718.0,717.91,717.88,717.5,717.1,717.04,716.83,716.9,717.14,717.27,717.13,717.16,717.07,716.92,717.33,717.58,717.65,717.74,717.64,717.13,717.02,716.87,716.86,716.93,717.31,717.42,717.37,717.43,717.58,717.54,717.46,717.48,717.45,716.92,717.22,717.51,717.29,717.26,717.06,717.05,716.97,716.85,716.92,717.54],"close":[714.57,713.82,713.86,713.21,713.94,713.38,714.12,714.48,713.78,713.09,711.91,711.36,711.05,711.19,711.0,711.45,711.85,712.21,712.78,713.59,712.67,713.06,713.26,714.08,713.78,714.17,714.67,714.92,715.75,716.12,716.25,716.87,716.76,716.48,716.48,717.1,717.69,717.99,718.39,718.19,718.2,718.12,717.88,718.25,718.75,719.17,718.78,719.73,719.62,719.57,719.4,719.56,719.62,719.66,720.01,720.12,720.09,721.3,722.0,722.14,722.14,721.96,721.67,720.96,721.12,721.06,720.79,721.1,721.21,721.18,721.39,721.8,721.58,721.29,721.51,721.73,721.67,721.21,721.25,721.11,721.08,721.48,721.51,721.61,721.91,721.97,722.22,722.35,722.38,722.03,721.89,721.88,721.38,721.5,721.33,721.63,721.46,721.58,721.7,721.54,721.25,720.88,719.02,718.15,718.83,719.36,719.7,719.9,719.98,719.88,719.55,719.34,719.09,719.0,719.46,719.42,719.33,719.21,719.04,719.1,718.77,718.62,718.24,718.13,718.57,718.28,718.6,718.18,717.99,718.07,718.75,719.23,719.49,719.3,719.16,718.58,718.92,719.09,719.26,719.11,719.05,718.97,718.94,719.24,719.93,719.99,719.52,719.61,719.98,719.97,719.96,719.82,719.27,719.29,719.23,719.29,719.75,719.79,719.57,719.44,719.15,718.72,718.95,718.99,719.07,719.2,719.03,718.43,718.15,718.09,718.33,718.48,718.62,718.14,718.35,718.39,718.35,719.14,719.14,719.1,719.04,719.35,719.0,719.34,719.38,719.68,719.78,719.94,719.82,719.54,719.57,719.52,719.55,719.42,719.21,718.99,718.82,719.08,719.21,719.16,718.84,718.86,718.64,717.92,717.86,718.18,718.14,718.2,718.2,718.11,718.3,717.75,717.98,718.26,718.17,718.28,718.24,718.28,718.1,718.21,718.09,718.58,718.49,718.37,718.38,718.68,718.47,718.56,718.53,718.66,718.99,719.22,719.36,719.38,719.15,719.2,719.42,719.27,719.23,719.42,719.64,719.62,719.53,719.24,719.17,719.23,719.31,719.23,719.25,719.32,719.35,719.49,719.44,719.31,719.12,719.3,719.3,719.22,719.24,719.37,719.42,719.46,719.5,719.8,719.91,719.67,719.41,719.53,719.48,719.44,719.55,719.56,719.22,719.25,719.15,719.25,719.23,719.36,719.56,719.47,719.54,719.44,719.44,719.51,719.58,719.49,719.47,719.52,719.51,719.18,719.22,719.13,719.25,719.02,718.9,718.73,718.84,718.95,718.93,718.97,718.94,718.75,718.47,718.33,718.22,718.08,718.02,718.12,718.1,718.15,718.37,718.12,717.42,717.43,717.4,717.78,718.01,718.4,718.15,718.18,718.09,718.19,718.22,718.13,718.5,718.73,718.54,718.44,718.57,718.33,718.63,718.57,718.6,718.45,718.28,718.41,718.49,718.5,718.32,718.42,718.33,718.34,718.21,718.1,717.99,718.03,718.03,718.09,718.01,717.95,717.53,717.12,717.19,716.99,717.24,717.41,717.57,717.13,717.35,717.09,717.15,717.87,717.64,717.89,717.84,717.75,717.18,717.16,716.89,717.0,717.35,717.66,717.47,717.37,717.65,717.64,717.7,717.54,717.55,717.56,717.25,717.52,717.6,717.37,717.58,717.09,717.18,717.14,717.08,717.63,717.63],"name":"QQQ","increasing":{"line":{"color":"#26a69a"},"fillcolor":"#26a69a"},"decreasing":{"line":{"color":"#ef5350"},"fillcolor":"#ef5350"},"hoverlabel":{"namelength":-1}},{"type":"scatter","mode":"markers+text","x":[],"y":[],"marker":{"symbol":[],"color":[],"size":14,"line":{"color":"#222","width":1}},"text":[],"textposition":"top center","textfont":{"size":10,"color":"#222"},"hovertext":[],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[],"name":"entry","showlegend":false},{"type":"scatter","mode":"markers+text","x":[],"y":[],"marker":{"symbol":[],"color":[],"size":14,"line":{"color":"#222","width":1}},"text":[],"textposition":"bottom center","textfont":{"size":10,"color":"#222"},"hovertext":[],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[],"name":"exit","showlegend":false},{"type":"scatter","mode":"markers","x":["10:00","10:05","10:07","10:08","10:10","10:24","10:57","11:12","11:14","11:38","11:40","12:02","12:35","13:01","13:17","13:20","13:30","13:56","14:02"],"y":[716.25,717.1,717.99,718.39,718.2,720.01,722.35,719.02,718.83,717.99,718.75,719.27,719.68,717.75,718.56,718.99,719.64,719.41,719.22],"marker":{"symbol":["triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-down","triangle-down","triangle-down","triangle-up","triangle-down","triangle-up","triangle-down","triangle-up","triangle-up","triangle-up","triangle-down","triangle-down"],"color":"#e67e22","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 10:00:58 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:05:58 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:07:43 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:08:48 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:10:42 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:24:42 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 10:57:48 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:12:00 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:14:32 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:38:57 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 11:40:47 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 12:02:58 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 12:35:27 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 13:01:42 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 13:17:28 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 13:20:53 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 13:30:58 · call<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 13:56:47 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>","信号 14:02:52 · put<br>结果: ✗ 被拦截<br>关卡: Quality Filter<br>未满足: gap_atr14_below_threshold<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 10:00:58 · call","信号 10:00:58 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:05:58 · call","信号 10:05:58 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:07:43 · call","信号 10:07:43 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:08:48 · call","信号 10:08:48 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:10:42 · call","信号 10:10:42 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:24:42 · call","信号 10:24:42 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 10:57:48 · call","信号 10:57:48 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:12:00 · put","信号 11:12:00 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:14:32 · put","信号 11:14:32 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:38:57 · put","信号 11:38:57 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 11:40:47 · call","信号 11:40:47 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 12:02:58 · put","信号 12:02:58 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 12:35:27 · call","信号 12:35:27 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 13:01:42 · put","信号 13:01:42 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 13:17:28 · call","信号 13:17:28 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 13:20:53 · call","信号 13:20:53 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 13:30:58 · call","信号 13:30:58 · call · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 13:56:47 · put","信号 13:56:47 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"],["信号 14:02:52 · put","信号 14:02:52 · put · ✗ 被拦截 · Quality Filter · gap_atr14_below_threshold"]],"name":"✗ Quality Filter (19)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["09:40","09:41","09:41","11:02","13:34","14:47"],"y":[711.91,711.36,711.36,721.38,719.17,718.4],"marker":{"symbol":["triangle-down","triangle-down","triangle-down","triangle-down","triangle-down","triangle-up"],"color":"#3498db","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:40:43 · put<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: insufficient_bars<br><i>点击可复制</i>","信号 09:41:00 · put<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: insufficient_bars<br><i>点击可复制</i>","信号 09:41:53 · put<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: insufficient_bars<br><i>点击可复制</i>","信号 11:02:58 · put<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: counter_trend_bull_put<br><i>点击可复制</i>","信号 13:34:27 · put<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: counter_trend_bull_put<br><i>点击可复制</i>","信号 14:47:43 · call<br>结果: ✗ 被拦截<br>关卡: Regime Filter<br>未满足: counter_trend_bear_call<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:40:43 · put","信号 09:40:43 · put · ✗ 被拦截 · Regime Filter · insufficient_bars"],["信号 09:41:00 · put","信号 09:41:00 · put · ✗ 被拦截 · Regime Filter · insufficient_bars"],["信号 09:41:53 · put","信号 09:41:53 · put · ✗ 被拦截 · Regime Filter · insufficient_bars"],["信号 11:02:58 · put","信号 11:02:58 · put · ✗ 被拦截 · Regime Filter · counter_trend_bull_put"],["信号 13:34:27 · put","信号 13:34:27 · put · ✗ 被拦截 · Regime Filter · counter_trend_bull_put"],["信号 14:47:43 · call","信号 14:47:43 · call · ✗ 被拦截 · Regime Filter · counter_trend_bear_call"]],"name":"✗ Regime Filter (6)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["09:49","09:58","09:59","10:01","10:06","10:17","11:11","11:12","12:11","12:17","12:44","12:53","14:25","14:42"],"y":[713.59,715.75,716.12,716.87,717.69,719.73,720.88,719.02,718.72,718.43,719.21,717.92,718.73,717.42],"marker":{"symbol":["triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-down","triangle-down","triangle-down","triangle-down","triangle-down","triangle-down","triangle-down","triangle-down"],"color":"#34495e","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 09:49:27 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 09:58:48 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 09:59:00 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 10:01:42 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 10:06:49 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 10:17:59 · call<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 11:11:32 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 11:12:21 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 12:11:38 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 12:17:27 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 12:44:43 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 12:53:38 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 14:25:53 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>","信号 14:42:58 · put<br>结果: ✗ 被拦截<br>关卡: Skip Score<br>未满足: score_over_cutoff<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 09:49:27 · call","信号 09:49:27 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 09:58:48 · call","信号 09:58:48 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 09:59:00 · call","信号 09:59:00 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 10:01:42 · call","信号 10:01:42 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 10:06:49 · call","信号 10:06:49 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 10:17:59 · call","信号 10:17:59 · call · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 11:11:32 · put","信号 11:11:32 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 11:12:21 · put","信号 11:12:21 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 12:11:38 · put","信号 12:11:38 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 12:17:27 · put","信号 12:17:27 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 12:44:43 · put","信号 12:44:43 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 12:53:38 · put","信号 12:53:38 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 14:25:53 · put","信号 14:25:53 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"],["信号 14:42:58 · put","信号 14:42:58 · put · ✗ 被拦截 · Skip Score · score_over_cutoff"]],"name":"✗ Skip Score (14)","visible":"legendonly","showlegend":true},{"type":"scatter","mode":"markers","x":["10:15","10:27","10:28","10:30","11:13","11:41","11:42","11:54","11:55","13:21","13:53"],"y":[719.17,721.3,722.0,722.14,718.15,719.23,719.49,719.93,719.99,719.22,719.8],"marker":{"symbol":["triangle-up","triangle-up","triangle-up","triangle-up","triangle-down","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up","triangle-up"],"color":"#8d6e63","size":9,"line":{"color":"#555","width":0.5}},"hovertext":["信号 10:15:59 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 10:27:32 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 10:28:38 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 10:30:49 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 11:13:11 · put<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 11:41:42 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 11:42:53 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 11:54:43 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 11:55:00 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 13:21:38 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>","信号 13:53:47 · call<br>结果: ✗ 被拦截<br>关卡: Quote / Sizing / BP<br>未满足: option_quote_fetch_error<br><i>点击可复制</i>"],"hovertemplate":"%{hovertext}<extra></extra>","customdata":[["信号 10:15:59 · call","信号 10:15:59 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 10:27:32 · call","信号 10:27:32 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 10:28:38 · call","信号 10:28:38 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 10:30:49 · call","信号 10:30:49 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 11:13:11 · put","信号 11:13:11 · put · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 11:41:42 · call","信号 11:41:42 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 11:42:53 · call","信号 11:42:53 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 11:54:43 · call","信号 11:54:43 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 11:55:00 · call","信号 11:55:00 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 13:21:38 · call","信号 13:21:38 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"],["信号 13:53:47 · call","信号 13:53:47 · call · ✗ 被拦截 · Quote / Sizing / BP · option_quote_fetch_error"]],"name":"✗ Quote / Sizing / BP (11)","visible":"legendonly","showlegend":true}],"layout":{"xaxis":{"type":"category","tickangle":-45,"nticks":30,"rangeslider":{"visible":false},"title":"ET time"},"yaxis":{"title":"QQQ price","fixedrange":false},"shapes":[],"dragmode":"pan","margin":{"l":50,"r":30,"t":20,"b":60},"plot_bgcolor":"#ffffff","paper_bgcolor":"#fafafa","showlegend":true,"legend":{"orientation":"h","x":0,"y":1.08,"xanchor":"left","yanchor":"bottom"}}};
+// When loaded inside an iframe (daily page embed) tag the body so we can
+// hide the redundant trade table below.
+try { if (window.parent !== window.self) document.body.classList.add('embedded'); } catch (e) {}
+const chartDiv = document.getElementById('chart');
+Plotly.newPlot(chartDiv, FIG.data, FIG.layout, {
+    responsive: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d']
+});
+window.addEventListener('resize', () => Plotly.Plots.resize(chartDiv));
+
+// --- Pinned copy card -----------------------------------------------------
+//
+// Plotly's hover tooltip is non-interactive, so we hook plotly_click on
+// the entry / exit / signal traces and pop a sticky card that hosts a real
+// Copy button. customdata on each marker is `[title, copyText]`; we never
+// touch the click event for any other trace (e.g. candlestick body).
+(() => {
+  const card = document.getElementById('qt-copy-card');
+  if (!card) return;
+  const titleEl = card.querySelector('[data-qt-card-title]');
+  const textEl = card.querySelector('[data-qt-card-text]');
+  const copyBtn = card.querySelector('[data-qt-card-copy]');
+  const closeBtn = card.querySelector('[data-qt-card-close]');
+  let copyResetTimer = null;
+
+  function show(clientX, clientY, title, text) {
+    titleEl.textContent = title;
+    textEl.textContent = text;
+    card.dataset.copyText = text;
+    // Pre-render hidden so we can measure
+    card.style.left = '0px';
+    card.style.top = '0px';
+    card.hidden = false;
+    const rect = card.getBoundingClientRect();
+    const margin = 8;
+    let x = clientX + 12;
+    let y = clientY + 12;
+    if (x + rect.width + margin > window.innerWidth) x = clientX - rect.width - 12;
+    if (y + rect.height + margin > window.innerHeight) y = clientY - rect.height - 12;
+    card.style.left = Math.max(margin, x) + 'px';
+    card.style.top = Math.max(margin, y) + 'px';
+    copyBtn.classList.remove('copied');
+    copyBtn.textContent = '复制';
+  }
+  function hide() {
+    card.hidden = true;
+    if (copyResetTimer) { clearTimeout(copyResetTimer); copyResetTimer = null; }
+  }
+
+  chartDiv.on('plotly_click', (ev) => {
+    const pt = ev && ev.points && ev.points[0];
+    if (!pt) return;
+    const cd = pt.customdata;
+    if (!Array.isArray(cd) || cd.length < 2) return;
+    const orig = ev.event || {};
+    show(orig.clientX || 0, orig.clientY || 0, String(cd[0]), String(cd[1]));
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const text = card.dataset.copyText || '';
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      // Fallback for older browsers / iframe sandboxing.
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-1000px';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        ta.remove();
+      } catch (e2) { ok = false; }
+    }
+    copyBtn.textContent = ok ? '已复制 ✓' : '复制失败';
+    copyBtn.classList.toggle('copied', ok);
+    if (copyResetTimer) clearTimeout(copyResetTimer);
+    copyResetTimer = setTimeout(() => {
+      copyBtn.textContent = '复制';
+      copyBtn.classList.remove('copied');
+    }, 1400);
+  });
+
+  closeBtn.addEventListener('click', hide);
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') hide(); });
+  // Click-outside to dismiss, but ignore clicks landing back on the
+  // chart (that re-opens the card via plotly_click anyway).
+  document.addEventListener('click', (ev) => {
+    if (card.hidden) return;
+    if (card.contains(ev.target)) return;
+    if (chartDiv.contains(ev.target)) return;
+    hide();
+  });
+})();
+</script>
+</body>
+</html>
