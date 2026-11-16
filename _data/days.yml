@@ -1722,3 +1722,16 @@
   biggest_loss: 0
   max_drawdown_usd: 0.0
   has_chart: true
+- date: "2026-11-16"
+  pnl: 83.0
+  trades: 7
+  wins: 3
+  losses: 4
+  breakeven: 0
+  win_rate: 0.4286
+  biggest_win: 122.0
+  biggest_loss: -60.0
+  max_drawdown_usd: -88.0
+  first_entry_et: "10:51"
+  last_exit_et: "13:51"
+  has_chart: true
