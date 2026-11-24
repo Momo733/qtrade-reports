@@ -1800,3 +1800,16 @@
   first_entry_et: "10:26"
   last_exit_et: "14:28"
   has_chart: true
+- date: "2026-11-24"
+  pnl: 188.0
+  trades: 12
+  wins: 6
+  losses: 6
+  breakeven: 0
+  win_rate: 0.5
+  biggest_win: 137.0
+  biggest_loss: -102.0
+  max_drawdown_usd: -242.0
+  first_entry_et: "10:44"
+  last_exit_et: "14:55"
+  has_chart: true
